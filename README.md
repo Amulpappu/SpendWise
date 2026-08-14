@@ -73,19 +73,6 @@ Your exported PDF statements are protected with deterministic passwords:
 
 ---
 
-## 🌐 Web Download Portal (Render.com)
-
-SpendWise includes a Google Antigravity-inspired web landing page in the `web/` folder.
-
-To deploy the web service for free on **Render.com**:
-1. Connect this repository to [Render.com](https://dashboard.render.com/).
-2. Create a new **Web Service** with:
-   * **Root Directory**: `web`
-   * **Start Command**: `npm start`
-3. Render will deploy your public website where anyone can view app details and download the latest `SpendWise.apk`!
-
----
-
 <p align="center">
   <b>SpendWise</b> — Crafted with Precision for Lohith. 100% Privacy Guaranteed.
 </p>
