@@ -113,13 +113,13 @@ fun LoginScreen(
                     currentStep = AuthStep.OTP_VERIFICATION
                     resendTimer = 30
                     isTimerRunning = true
-                    Toast.makeText(context, "✅ Firebase SMS OTP sent to +91 ", Toast.LENGTH_LONG).show()
+                    Toast.makeText(context, "âœ… Firebase SMS OTP sent to +91 ", Toast.LENGTH_LONG).show()
                 },
                 onVerificationCompleted = { credential ->
                     credential.smsCode?.let { enteredOtp = it }
                     isSendingOtp = false
                     currentStep = AuthStep.PROFILE_SETUP
-                    Toast.makeText(context, "✅ Phone Number Verified Automatically!", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "âœ… Phone Number Verified Automatically!", Toast.LENGTH_SHORT).show()
                 },
                 onVerificationFailed = { e ->
                     isSendingOtp = false
@@ -134,7 +134,7 @@ fun LoginScreen(
             currentStep = AuthStep.OTP_VERIFICATION
             resendTimer = 30
             isTimerRunning = true
-            Toast.makeText(context, "📱 OTP sent to +91 ", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, "ðŸ“± OTP sent to +91 ", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -201,7 +201,7 @@ fun LoginScreen(
                     .border(2.dp, PrimaryEmerald, CircleShape)
             ) {
                 Image(
-                    painter = painterResource(id = R.mipmap.ic_launcher),
+                    painter = painterResource(id = R.drawable.ic_spendwise_logo),
                     contentDescription = "SpendWise Logo",
                     modifier = Modifier.size(56.dp)
                 )
@@ -343,7 +343,7 @@ fun LoginScreen(
                                     enteredOtp = digitsOnly
                                 },
                                 label = { Text("6-Digit OTP Code") },
-                                placeholder = { Text("• • • • • •") },
+                                placeholder = { Text("â€¢ â€¢ â€¢ â€¢ â€¢ â€¢") },
                                 leadingIcon = { Icon(Icons.Default.Pin, contentDescription = null) },
                                 keyboardOptions = KeyboardOptions(
                                     keyboardType = KeyboardType.Number,
@@ -422,7 +422,7 @@ fun LoginScreen(
                                         userName = detected.userName
                                         accountNumber = detected.accountNumber
                                         bankName = detected.bankName
-                                        Toast.makeText(context, "✨ Auto-detected:  ()", Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(context, "âœ¨ Auto-detected:  ()", Toast.LENGTH_SHORT).show()
                                     },
                                     contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp)
                                 ) {
@@ -492,7 +492,7 @@ fun LoginScreen(
                                     .fillMaxWidth()
                                     .height(50.dp)
                             ) {
-                                Text("Start Using SpendWise 🚀", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                                Text("Start Using SpendWise ðŸš€", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                             }
                         }
                     }
