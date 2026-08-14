@@ -12,7 +12,7 @@ import java.util.*
 
 object GoogleSheetsSyncManager {
 
-    const val DEFAULT_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbxVXjX6oeYpWJoFh-wT6ENPbnITMvy0n00ckSxEV2stv68EfskZatjJNXHnWjMrqqogow/exec"
+    const val DEFAULT_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbx27gXUzTE6lKEhP-a1UGhLJ5MwctducYTHKmExClNzf57ZM69sbVouwbBC7qwAD704Fw/exec"
     private const val PREFS_NAME = "google_sheets_prefs"
     private const val KEY_WEBHOOK_URL = "webhook_url"
     private const val KEY_AUTO_SYNC = "auto_sync_enabled"
@@ -22,7 +22,13 @@ object GoogleSheetsSyncManager {
     fun getWebhookUrl(context: Context): String {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val saved = prefs.getString(KEY_WEBHOOK_URL, null)
-        return if (saved.isNullOrBlank() || saved.contains("AKfycbyUbZ61_7UnASiyLV") || saved.contains("AKfycbxec14GhgurG284NGRX2k0yBK6dU9TdkhL0csLbkNlomClA9_2AGGVmOLBFE4HH0qHt") || saved.contains("AKfycbyvvndQsIPGPpsjSm3ilauC2aXpa0eW3lkyFHwBPmUibYeHYrkskJcJNE47NcWcELehog")) DEFAULT_WEBHOOK_URL else saved
+        val oldUrls = listOf(
+            "AKfycbyUbZ61_7UnASiyLV",
+            "AKfycbxec14GhgurG284NGRX2k0yBK6dU9TdkhL0csLbkNlomClA9_2AGGVmOLBFE4HH0qHt",
+            "AKfycbyvvndQsIPGPpsjSm3ilauC2aXpa0eW3lkyFHwBPmUibYeHYrkskJcJNE47NcWcELehog",
+            "AKfycbxVXjX6oeYpWJoFh-wT6ENPbnITMvy0n00ckSxEV2stv68EfskZatjJNXHnWjMrqqogow"
+        )
+        return if (saved.isNullOrBlank() || oldUrls.any { saved.contains(it) }) DEFAULT_WEBHOOK_URL else saved
     }
 
     fun saveWebhookUrl(context: Context, url: String) {
