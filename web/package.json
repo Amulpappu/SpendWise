@@ -1,0 +1,25 @@
+{
+  "name": "spendwise-landing-web",
+  "version": "2.4.0",
+  "description": "SpendWise - Smart Bank & UPI Expense Tracker Official Download & Showcase Portal",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "cors": "^2.8.5"
+  },
+  "keywords": [
+    "spendwise",
+    "expense-tracker",
+    "bank-statement",
+    "upi",
+    "render",
+    "android",
+    "apk"
+  ],
+  "author": "Lohith",
+  "license": "MIT"
+}

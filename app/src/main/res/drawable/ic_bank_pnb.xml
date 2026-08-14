@@ -1,0 +1,17 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+    <!-- PNB Maroon Rounded Background -->
+    <path
+        android:fillColor="#A20000"
+        android:pathData="M6,6h36a4,4 0,0 1,4 4v28a4,4 0,0 1,-4 4h-36a4,4 0,0 1,-4 -4v-28a4,4 0,0 1,4 -4z"/>
+    <!-- Gold PNB Stylized Flame / Gurmukhi Emblem -->
+    <path
+        android:fillColor="#FFD100"
+        android:pathData="M24,12 C28,16 32,20 32,26 C32,31 28,35 24,35 C20,35 16,31 16,26 C16,21 21,17 24,12Z"/>
+    <path
+        android:fillColor="#A20000"
+        android:pathData="M24,20 C26,22 27,24 27,27 C27,29 25,31 24,31 C23,31 21,29 21,27 C21,25 22,23 24,20Z"/>
+</vector>

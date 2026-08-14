@@ -1,0 +1,21 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+    <!-- Kotak Crimson Red Circle -->
+    <path
+        android:fillColor="#ED1C24"
+        android:pathData="M24,24m-22,0a22,22 0,1 1,44 0a22,22 0,1 1,-44 0"/>
+    <!-- Kotak White Infinity / Shield Curves -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="3.5"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000"
+        android:pathData="M16,28 C14,24 14,20 18,17 C22,14 26,18 24,24 C22,30 26,34 30,31 C34,28 34,24 32,20"/>
+    <!-- Center Blue Accent Dot -->
+    <path
+        android:fillColor="#002D62"
+        android:pathData="M24,24m-2.5,0a2.5,2.5 0,1 1,5 0a2.5,2.5 0,1 1,-5 0"/>
+</vector>

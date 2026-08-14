@@ -1,0 +1,24 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+    <!-- TMB Official Emerald Circle -->
+    <path
+        android:fillColor="#006837"
+        android:pathData="M24,24m-22,0a22,22 0,1 1,44 0a22,22 0,1 1,-44 0"/>
+    <!-- Gold Outer Ring -->
+    <path
+        android:strokeColor="#FFD700"
+        android:strokeWidth="2"
+        android:fillColor="#00000000"
+        android:pathData="M24,24m-19,0a19,19 0,1 1,38 0a19,19 0,1 1,-38 0"/>
+    <!-- Gold Coin / Scales Crest -->
+    <path
+        android:fillColor="#FFD700"
+        android:pathData="M24,12L28,18H20L24,12ZM15,22L21,22L18,29ZM33,22L27,22L30,29ZM24,20L24,35M18,35L30,35"/>
+    <!-- TMB Typography -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M22,34L26,34L26,36L22,36Z"/>
+</vector>
