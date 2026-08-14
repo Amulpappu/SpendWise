@@ -12,7 +12,7 @@ import java.util.*
 
 object GoogleSheetsSyncManager {
 
-    const val DEFAULT_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbx27gXUzTE6lKEhP-a1UGhLJ5MwctducYTHKmExClNzf57ZM69sbVouwbBC7qwAD704Fw/exec"
+    const val DEFAULT_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbzn73PYrhFuWrVQEDaLPLzP6FIXqD-elT3AEDyZvnT_D1mjJt8diVEliKAqKdibrO3e9Q/exec"
     private const val PREFS_NAME = "google_sheets_prefs"
     private const val KEY_WEBHOOK_URL = "webhook_url"
     private const val KEY_AUTO_SYNC = "auto_sync_enabled"
@@ -26,7 +26,8 @@ object GoogleSheetsSyncManager {
             "AKfycbyUbZ61_7UnASiyLV",
             "AKfycbxec14GhgurG284NGRX2k0yBK6dU9TdkhL0csLbkNlomClA9_2AGGVmOLBFE4HH0qHt",
             "AKfycbyvvndQsIPGPpsjSm3ilauC2aXpa0eW3lkyFHwBPmUibYeHYrkskJcJNE47NcWcELehog",
-            "AKfycbxVXjX6oeYpWJoFh-wT6ENPbnITMvy0n00ckSxEV2stv68EfskZatjJNXHnWjMrqqogow"
+            "AKfycbxVXjX6oeYpWJoFh-wT6ENPbnITMvy0n00ckSxEV2stv68EfskZatjJNXHnWjMrqqogow",
+            "AKfycbx27gXUzTE6lKEhP-a1UGhLJ5MwctducYTHKmExClNzf57ZM69sbVouwbBC7qwAD704Fw"
         )
         return if (saved.isNullOrBlank() || oldUrls.any { saved.contains(it) }) DEFAULT_WEBHOOK_URL else saved
     }
