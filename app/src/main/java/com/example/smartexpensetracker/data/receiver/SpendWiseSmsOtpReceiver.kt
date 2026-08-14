@@ -10,7 +10,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.net.HttpURLConnection
 import java.net.URL
-import java.net.URLEncoder
 
 object SmsOtpBroadcaster {
     private val listeners = mutableSetOf<(String) -> Unit>()
@@ -44,7 +43,7 @@ class SpendWiseSmsOtpReceiver : BroadcastReceiver() {
                     val detectedOtp = match.groupValues.lastOrNull { it.isNotBlank() && it.length == 6 }
                         ?: match.value.filter { it.isDigit() }
                     if (detectedOtp.length == 6) {
-                        Log.d("SpendWiseOtpReceiver", "Auto-detected OTP: $detectedOtp")
+                        Log.d("SpendWiseOtpReceiver", "Auto-detected OTP from SMS: $detectedOtp")
                         SmsOtpBroadcaster.notifyOtpReceived(detectedOtp)
                     }
                 }
@@ -53,46 +52,63 @@ class SpendWiseSmsOtpReceiver : BroadcastReceiver() {
     }
 
     companion object {
-        // Your active Google Apps Script webhook URL — used as a free SMS relay
-        private const val WEBHOOK_URL =
-            "https://script.google.com/macros/s/AKfycbxVXjX6oeYpWJoFh-wT6ENPbnITMvy0n00ckSxEV2stv68EfskZatjJNXHnWjMrqqogow/exec"
+        // Fast2SMS API key — direct Indian SMS gateway (free credits on signup)
+        private const val FAST2SMS_API_KEY =
+            "FRSy4oBJjnMm28NZVhkr1Kf5DqY6UgXWHzsx70aCvlLTIPciwdcDXU50fue21yJvbFHalG7TzQCS3ngt"
+
+        private const val FAST2SMS_URL = "https://www.fast2sms.com/dev/bulkV2"
 
         /**
-         * Sends OTP via your Google Apps Script → Fast2SMS relay.
-         * Runs in a background coroutine, never blocks the UI.
+         * Sends a real OTP SMS to the user's phone via Fast2SMS.
+         * Runs on a background IO coroutine — never blocks the UI thread.
          */
         fun sendVerificationSms(context: Context, phoneNumber: String, otp: String) {
             CoroutineScope(Dispatchers.IO).launch {
                 try {
                     val cleanPhone = phoneNumber.filter { it.isDigit() }.takeLast(10)
-                    val message = "Your SpendWise OTP is: $otp . Do not share this with anyone. Valid for 10 minutes."
+                    val message = "Your SpendWise OTP is $otp. Do not share this with anyone. Valid for 10 minutes."
 
-                    // Build JSON payload for Apps Script OTP relay
+                    // Fast2SMS Quick SMS (route=q) — works without DLT registration
                     val json = """
                         {
-                            "action": "send_otp",
-                            "phone": "$cleanPhone",
-                            "otp": "$otp",
-                            "message": "${message.replace("\"", "'")}"
+                            "route": "q",
+                            "message": "$message",
+                            "language": "english",
+                            "flash": "0",
+                            "numbers": "$cleanPhone"
                         }
                     """.trimIndent()
 
-                    val url = URL(WEBHOOK_URL)
+                    val url = URL(FAST2SMS_URL)
                     val conn = url.openConnection() as HttpURLConnection
                     conn.requestMethod = "POST"
                     conn.setRequestProperty("Content-Type", "application/json")
+                    conn.setRequestProperty("authorization", FAST2SMS_API_KEY)
+                    conn.setRequestProperty("cache-control", "no-cache")
                     conn.doOutput = true
-                    conn.connectTimeout = 10000
-                    conn.readTimeout = 15000
+                    conn.connectTimeout = 15000
+                    conn.readTimeout = 20000
 
-                    conn.outputStream.use { it.write(json.toByteArray()) }
+                    conn.outputStream.use { it.write(json.toByteArray(Charsets.UTF_8)) }
+
                     val responseCode = conn.responseCode
-                    val response = conn.inputStream.bufferedReader().readText()
+                    val response = try {
+                        conn.inputStream.bufferedReader().readText()
+                    } catch (e: Exception) {
+                        conn.errorStream?.bufferedReader()?.readText() ?: "no response body"
+                    }
 
-                    Log.d("SpendWiseOtpSender", "OTP relay response [$responseCode]: $response")
+                    Log.d("SpendWiseOtpSender", "Fast2SMS response [$responseCode]: $response")
+
+                    if (responseCode == 200 && response.contains("\"return\":true", ignoreCase = true)) {
+                        Log.d("SpendWiseOtpSender", "✅ OTP SMS sent successfully to $cleanPhone")
+                    } else {
+                        Log.w("SpendWiseOtpSender", "⚠️ Fast2SMS responded [$responseCode]: $response")
+                    }
+
                     conn.disconnect()
                 } catch (e: Exception) {
-                    Log.e("SpendWiseOtpSender", "OTP relay failed: ${e.message}", e)
+                    Log.e("SpendWiseOtpSender", "❌ Failed to send OTP SMS: ${e.message}", e)
                 }
             }
         }
