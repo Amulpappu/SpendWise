@@ -55,7 +55,6 @@ fun LoginScreen(
 ) {
     val context = LocalContext.current
     val userProfile by viewModel.userProfile.collectAsState()
-    val generatedOtp by viewModel.currentGeneratedOtp.collectAsState()
 
     var currentStep by remember { mutableStateOf(AuthStep.PHONE_INPUT) }
     var phoneNumber by remember { mutableStateOf(userProfile.mobileNumber.ifBlank { "6379982741" }) }
@@ -64,26 +63,10 @@ fun LoginScreen(
     var accountNumber by remember { mutableStateOf(userProfile.accountNumber.ifBlank { "381 100050 305779" }) }
     var bankName by remember { mutableStateOf(userProfile.bankName.ifBlank { "Tamilnad Mercantile Bank (TMB)" }) }
     var showBankSelector by remember { mutableStateOf(false) }
+    var isSendingOtp by remember { mutableStateOf(false) }
 
     var resendTimer by remember { mutableStateOf(30) }
     var isTimerRunning by remember { mutableStateOf(false) }
-
-    // Runtime SMS permission launcher — required on Android 6+ to actually send SMS
-    val smsPermissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestMultiplePermissions()
-    ) { permissions ->
-        val sendGranted = permissions[Manifest.permission.SEND_SMS] ?: false
-        if (sendGranted) {
-            // Permissions just granted — now actually send the OTP SMS
-            viewModel.sendOtp(phoneNumber)
-            currentStep = AuthStep.OTP_VERIFICATION
-            resendTimer = 30
-            isTimerRunning = true
-            Toast.makeText(context, "✅ OTP sent to +91 $phoneNumber via SMS", Toast.LENGTH_LONG).show()
-        } else {
-            Toast.makeText(context, "SMS permission denied. Please allow SMS permission in Settings.", Toast.LENGTH_LONG).show()
-        }
-    }
 
     // Automatic SMS OTP Detection Listener
     DisposableEffect(Unit) {
@@ -217,40 +200,30 @@ fun LoginScreen(
                             Button(
                                 onClick = {
                                     if (phoneNumber.length == 10) {
-                                        val sendGranted = ContextCompat.checkSelfPermission(
-                                            context, Manifest.permission.SEND_SMS
-                                        ) == PackageManager.PERMISSION_GRANTED
-                                        val receiveGranted = ContextCompat.checkSelfPermission(
-                                            context, Manifest.permission.RECEIVE_SMS
-                                        ) == PackageManager.PERMISSION_GRANTED
-
-                                        if (sendGranted) {
-                                            // Permission already granted — send OTP immediately
-                                            viewModel.sendOtp(phoneNumber)
-                                            currentStep = AuthStep.OTP_VERIFICATION
-                                            resendTimer = 30
-                                            isTimerRunning = true
-                                            Toast.makeText(context, "✅ OTP sent to +91 $phoneNumber via SMS", Toast.LENGTH_LONG).show()
-                                        } else {
-                                            // Request SMS permissions first
-                                            val permsToRequest = mutableListOf<String>()
-                                            if (!sendGranted) permsToRequest.add(Manifest.permission.SEND_SMS)
-                                            if (!receiveGranted) permsToRequest.add(Manifest.permission.RECEIVE_SMS)
-                                            smsPermissionLauncher.launch(permsToRequest.toTypedArray())
-                                        }
+                                        isSendingOtp = true
+                                        viewModel.sendOtp(phoneNumber)
+                                        currentStep = AuthStep.OTP_VERIFICATION
+                                        resendTimer = 30
+                                        isTimerRunning = true
+                                        isSendingOtp = false
+                                        Toast.makeText(context, "📱 OTP sent to +91 $phoneNumber. Check your SMS!", Toast.LENGTH_LONG).show()
                                     } else {
                                         Toast.makeText(context, "Please enter a valid 10-digit mobile number", Toast.LENGTH_SHORT).show()
                                     }
                                 },
-                                enabled = phoneNumber.length == 10,
+                                enabled = phoneNumber.length == 10 && !isSendingOtp,
                                 shape = RoundedCornerShape(14.dp),
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(50.dp)
                             ) {
-                                Text("Get OTP via SMS", fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Icon(Icons.Default.ArrowForward, contentDescription = null)
+                                if (isSendingOtp) {
+                                    CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.onPrimary)
+                                } else {
+                                    Text("Get OTP via SMS", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Icon(Icons.Default.ArrowForward, contentDescription = null)
+                                }
                             }
                         }
 
@@ -315,20 +288,10 @@ fun LoginScreen(
                                     Text("Resend in ${resendTimer}s", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
                                 } else {
                                     TextButton(onClick = {
-                                        val sendGranted = ContextCompat.checkSelfPermission(
-                                            context, Manifest.permission.SEND_SMS
-                                        ) == PackageManager.PERMISSION_GRANTED
-                                        if (sendGranted) {
-                                            viewModel.sendOtp(phoneNumber)
-                                            resendTimer = 30
-                                            isTimerRunning = true
-                                            Toast.makeText(context, "✅ OTP resent to +91 $phoneNumber", Toast.LENGTH_LONG).show()
-                                        } else {
-                                            smsPermissionLauncher.launch(arrayOf(
-                                                Manifest.permission.SEND_SMS,
-                                                Manifest.permission.RECEIVE_SMS
-                                            ))
-                                        }
+                                        viewModel.sendOtp(phoneNumber)
+                                        resendTimer = 30
+                                        isTimerRunning = true
+                                        Toast.makeText(context, "📱 OTP resent to +91 $phoneNumber. Check your SMS!", Toast.LENGTH_LONG).show()
                                     }) {
                                         Text("Resend OTP", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
                                     }
