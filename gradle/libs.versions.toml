@@ -16,6 +16,8 @@ lifecycleViewmodelNav3 = "2.10.0"
 room = "2.6.1"
 navigationCompose = "2.8.0"
 gson = "2.10.1"
+googleServices = "4.4.2"
+firebaseBom = "33.7.0"
 
 [libraries]
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "androidxCore" }
@@ -42,9 +44,12 @@ androidx-room-runtime = { module = "androidx.room:room-runtime", version.ref = "
 androidx-room-ktx = { module = "androidx.room:room-ktx", version.ref = "room" }
 androidx-room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
 gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
+firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.ref = "firebaseBom" }
+firebase-auth = { group = "com.google.firebase", name = "firebase-auth" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "androidGradlePlugin" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+google-services = { id = "com.google.gms.google-services", version.ref = "googleServices" }

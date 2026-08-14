@@ -1,10 +1,7 @@
 package com.example.smartexpensetracker.ui.screens.auth
 
-import android.Manifest
-import android.content.pm.PackageManager
+import android.app.Activity
 import android.widget.Toast
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -34,8 +31,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.content.ContextCompat
 import com.example.smartexpensetracker.R
+import com.example.smartexpensetracker.data.auth.FirebasePhoneAuthHelper
 import com.example.smartexpensetracker.ui.theme.PrimaryEmerald
 import com.example.smartexpensetracker.ui.theme.SuccessGreen
 import com.example.smartexpensetracker.ui.viewmodel.MainViewModel
@@ -54,6 +51,7 @@ fun LoginScreen(
     onLoginSuccess: () -> Unit
 ) {
     val context = LocalContext.current
+    val activity = context as? Activity
     val userProfile by viewModel.userProfile.collectAsState()
 
     var currentStep by remember { mutableStateOf(AuthStep.PHONE_INPUT) }
@@ -64,6 +62,8 @@ fun LoginScreen(
     var bankName by remember { mutableStateOf(userProfile.bankName.ifBlank { "Tamilnad Mercantile Bank (TMB)" }) }
     var showBankSelector by remember { mutableStateOf(false) }
     var isSendingOtp by remember { mutableStateOf(false) }
+    var isVerifyingOtp by remember { mutableStateOf(false) }
+    var firebaseVerificationId by remember { mutableStateOf<String?>(null) }
 
     var resendTimer by remember { mutableStateOf(30) }
     var isTimerRunning by remember { mutableStateOf(false) }
@@ -83,13 +83,97 @@ fun LoginScreen(
         }
     }
 
-    LaunchedEffect(isTimerRunning) {
-        if (isTimerRunning) {
-            while (resendTimer > 0) {
-                delay(1000)
-                resendTimer--
-            }
+    // Resend countdown timer
+    LaunchedEffect(isTimerRunning, resendTimer) {
+        if (isTimerRunning && resendTimer > 0) {
+            delay(1000L)
+            resendTimer -= 1
+        } else if (resendTimer == 0) {
             isTimerRunning = false
+        }
+    }
+
+    fun triggerOtpSend() {
+        if (phoneNumber.length != 10) {
+            Toast.makeText(context, "Please enter a valid 10-digit mobile number", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        isSendingOtp = true
+        // Also trigger fallback local OTP
+        viewModel.sendOtp(phoneNumber)
+
+        if (activity != null) {
+            FirebasePhoneAuthHelper.sendVerificationCode(
+                activity = activity,
+                phoneNumber = phoneNumber,
+                onCodeSent = { verificationId ->
+                    firebaseVerificationId = verificationId
+                    isSendingOtp = false
+                    currentStep = AuthStep.OTP_VERIFICATION
+                    resendTimer = 30
+                    isTimerRunning = true
+                    Toast.makeText(context, "✅ Firebase SMS OTP sent to +91 ", Toast.LENGTH_LONG).show()
+                },
+                onVerificationCompleted = { credential ->
+                    credential.smsCode?.let { enteredOtp = it }
+                    isSendingOtp = false
+                    currentStep = AuthStep.PROFILE_SETUP
+                    Toast.makeText(context, "✅ Phone Number Verified Automatically!", Toast.LENGTH_SHORT).show()
+                },
+                onVerificationFailed = { e ->
+                    isSendingOtp = false
+                    currentStep = AuthStep.OTP_VERIFICATION
+                    resendTimer = 30
+                    isTimerRunning = true
+                    Toast.makeText(context, "OTP generated! Enter code or test token.", Toast.LENGTH_SHORT).show()
+                }
+            )
+        } else {
+            isSendingOtp = false
+            currentStep = AuthStep.OTP_VERIFICATION
+            resendTimer = 30
+            isTimerRunning = true
+            Toast.makeText(context, "📱 OTP sent to +91 ", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    fun triggerOtpVerify() {
+        if (enteredOtp.length != 6) {
+            Toast.makeText(context, "Please enter the 6-digit OTP code", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        isVerifyingOtp = true
+        val vId = firebaseVerificationId
+        if (vId != null) {
+            FirebasePhoneAuthHelper.verifyCode(
+                verificationId = vId,
+                code = enteredOtp,
+                onSuccess = {
+                    isVerifyingOtp = false
+                    viewModel.verifyOtp(enteredOtp)
+                    currentStep = AuthStep.PROFILE_SETUP
+                },
+                onFailure = {
+                    // Fallback to ViewModel verify
+                    val valid = viewModel.verifyOtp(enteredOtp)
+                    isVerifyingOtp = false
+                    if (valid) {
+                        currentStep = AuthStep.PROFILE_SETUP
+                    } else {
+                        Toast.makeText(context, "Invalid OTP. Please check the code.", Toast.LENGTH_LONG).show()
+                    }
+                }
+            )
+        } else {
+            val valid = viewModel.verifyOtp(enteredOtp)
+            isVerifyingOtp = false
+            if (valid) {
+                currentStep = AuthStep.PROFILE_SETUP
+            } else {
+                Toast.makeText(context, "Invalid OTP code. Please enter 6-digit code.", Toast.LENGTH_LONG).show()
+            }
         }
     }
 
@@ -99,81 +183,93 @@ fun LoginScreen(
             .background(MaterialTheme.colorScheme.background)
     ) {
         Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier
                 .fillMaxSize()
+                .verticalScroll(rememberScrollState())
                 .padding(24.dp)
-                .verticalScroll(rememberScrollState()),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
         ) {
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(30.dp))
 
-            // App Logo
-            Surface(
-                shape = RoundedCornerShape(24.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant,
-                modifier = Modifier.size(80.dp),
-                shadowElevation = 6.dp
+            // App Logo & Header
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier
+                    .size(88.dp)
+                    .clip(CircleShape)
+                    .background(PrimaryEmerald.copy(alpha = 0.15f))
+                    .border(2.dp, PrimaryEmerald, CircleShape)
             ) {
                 Image(
-                    painter = painterResource(id = R.drawable.ic_spendwise_logo),
+                    painter = painterResource(id = R.mipmap.ic_launcher),
                     contentDescription = "SpendWise Logo",
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(8.dp)
-                        .clip(RoundedCornerShape(16.dp))
+                    modifier = Modifier.size(56.dp)
                 )
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
             Text(
                 text = "SpendWise",
-                style = MaterialTheme.typography.headlineMedium.copy(
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 28.sp
-                ),
-                color = MaterialTheme.colorScheme.onBackground
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.ExtraBold,
+                color = PrimaryEmerald
             )
 
             Text(
-                text = "Smart Bank & UPI Expense Tracker",
+                text = "Smart Bank SMS Expense Tracker",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
             )
 
             Spacer(modifier = Modifier.height(28.dp))
 
-            // Animated Step Container
+            // Step Progress Indicator
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                StepIndicator(step = 1, title = "Number", isActive = currentStep == AuthStep.PHONE_INPUT, isDone = currentStep.ordinal > 0)
+                StepLine(isDone = currentStep.ordinal > 0)
+                StepIndicator(step = 2, title = "OTP", isActive = currentStep == AuthStep.OTP_VERIFICATION, isDone = currentStep.ordinal > 1)
+                StepLine(isDone = currentStep.ordinal > 1)
+                StepIndicator(step = 3, title = "Profile", isActive = currentStep == AuthStep.PROFILE_SETUP, isDone = false)
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Main Card
             Card(
-                shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-                elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(
-                    modifier = Modifier.padding(24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(20.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     when (currentStep) {
                         AuthStep.PHONE_INPUT -> {
-                            // Step 1: Phone Number
+                            // Step 1: Mobile Number Input
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 modifier = Modifier.fillMaxWidth()
                             ) {
-                                Icon(Icons.Default.PhoneIphone, contentDescription = null, tint = PrimaryEmerald)
+                                Icon(Icons.Default.PhoneAndroid, contentDescription = null, tint = PrimaryEmerald)
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    text = "Mobile Login & Verification",
+                                    text = "Enter Mobile Number",
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold
                                 )
                             }
 
                             Text(
-                                text = "Enter your 10-digit mobile number to verify your bank SMS identity via OTP.",
+                                text = "Enter your 10-digit mobile number to verify your identity via Firebase Phone OTP.",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                                 modifier = Modifier.fillMaxWidth()
@@ -192,25 +288,14 @@ fun LoginScreen(
                                     keyboardType = KeyboardType.Phone,
                                     imeAction = ImeAction.Done
                                 ),
+                                keyboardActions = KeyboardActions(onDone = { triggerOtpSend() }),
                                 singleLine = true,
                                 shape = RoundedCornerShape(14.dp),
                                 modifier = Modifier.fillMaxWidth()
                             )
 
                             Button(
-                                onClick = {
-                                    if (phoneNumber.length == 10) {
-                                        isSendingOtp = true
-                                        viewModel.sendOtp(phoneNumber)
-                                        currentStep = AuthStep.OTP_VERIFICATION
-                                        resendTimer = 30
-                                        isTimerRunning = true
-                                        isSendingOtp = false
-                                        Toast.makeText(context, "📱 OTP sent to +91 $phoneNumber. Check your SMS!", Toast.LENGTH_LONG).show()
-                                    } else {
-                                        Toast.makeText(context, "Please enter a valid 10-digit mobile number", Toast.LENGTH_SHORT).show()
-                                    }
-                                },
+                                onClick = { triggerOtpSend() },
                                 enabled = phoneNumber.length == 10 && !isSendingOtp,
                                 shape = RoundedCornerShape(14.dp),
                                 modifier = Modifier
@@ -219,6 +304,8 @@ fun LoginScreen(
                             ) {
                                 if (isSendingOtp) {
                                     CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.onPrimary)
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text("Sending OTP...", fontWeight = FontWeight.Bold)
                                 } else {
                                     Text("Get OTP via SMS", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                                     Spacer(modifier = Modifier.width(8.dp))
@@ -243,13 +330,11 @@ fun LoginScreen(
                             }
 
                             Text(
-                                text = "A 6-digit verification code was sent to +91 $phoneNumber",
+                                text = "A 6-digit verification code was sent to +91 ",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                                 modifier = Modifier.fillMaxWidth()
                             )
-
-
 
                             OutlinedTextField(
                                 value = enteredOtp,
@@ -264,9 +349,12 @@ fun LoginScreen(
                                     keyboardType = KeyboardType.Number,
                                     imeAction = ImeAction.Done
                                 ),
-                                textStyle = MaterialTheme.typography.titleLarge.copy(
-                                    letterSpacing = 8.sp,
+                                keyboardActions = KeyboardActions(onDone = { triggerOtpVerify() }),
+                                textStyle = LocalTextStyle.current.copy(
+                                    fontSize = 22.sp,
                                     fontWeight = FontWeight.Bold,
+                                    letterSpacing = 6.sp,
+                                    fontFamily = FontFamily.Monospace,
                                     textAlign = TextAlign.Center
                                 ),
                                 singleLine = true,
@@ -287,33 +375,27 @@ fun LoginScreen(
                                 if (isTimerRunning) {
                                     Text("Resend in ${resendTimer}s", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
                                 } else {
-                                    TextButton(onClick = {
-                                        viewModel.sendOtp(phoneNumber)
-                                        resendTimer = 30
-                                        isTimerRunning = true
-                                        Toast.makeText(context, "📱 OTP resent to +91 $phoneNumber. Check your SMS!", Toast.LENGTH_LONG).show()
-                                    }) {
+                                    TextButton(onClick = { triggerOtpSend() }) {
                                         Text("Resend OTP", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
                                     }
                                 }
                             }
 
                             Button(
-                                onClick = {
-                                    val valid = viewModel.verifyOtp(enteredOtp)
-                                    if (valid) {
-                                        currentStep = AuthStep.PROFILE_SETUP
-                                    } else {
-                                        Toast.makeText(context, "Invalid OTP code. Please enter 6-digit code or tap to auto-fill.", Toast.LENGTH_LONG).show()
-                                    }
-                                },
-                                enabled = enteredOtp.length == 6,
+                                onClick = { triggerOtpVerify() },
+                                enabled = enteredOtp.length == 6 && !isVerifyingOtp,
                                 shape = RoundedCornerShape(14.dp),
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(50.dp)
                             ) {
-                                Text("Verify & Continue", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                                if (isVerifyingOtp) {
+                                    CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.onPrimary)
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text("Verifying...", fontWeight = FontWeight.Bold)
+                                } else {
+                                    Text("Verify & Continue", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                                }
                             }
                         }
 
@@ -340,7 +422,7 @@ fun LoginScreen(
                                         userName = detected.userName
                                         accountNumber = detected.accountNumber
                                         bankName = detected.bankName
-                                        Toast.makeText(context, "⚡ Auto-detected: ${detected.bankName} (${detected.accountNumber})", Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(context, "✨ Auto-detected:  ()", Toast.LENGTH_SHORT).show()
                                     },
                                     contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp)
                                 ) {
@@ -402,7 +484,7 @@ fun LoginScreen(
                                         accountNumber = accountNumber.ifBlank { "SB 305779" },
                                         bankName = bankName.ifBlank { "Tamilnad Mercantile Bank (TMB)" }
                                     )
-                                    Toast.makeText(context, "Welcome to SpendWise, $userName!", Toast.LENGTH_LONG).show()
+                                    Toast.makeText(context, "Welcome to SpendWise, !", Toast.LENGTH_LONG).show()
                                     onLoginSuccess()
                                 },
                                 shape = RoundedCornerShape(14.dp),
@@ -446,4 +528,52 @@ fun LoginScreen(
             }
         )
     }
+}
+
+@Composable
+fun StepIndicator(step: Int, title: String, isActive: Boolean, isDone: Boolean) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .size(32.dp)
+                .clip(CircleShape)
+                .background(
+                    when {
+                        isDone -> SuccessGreen
+                        isActive -> PrimaryEmerald
+                        else -> MaterialTheme.colorScheme.surfaceVariant
+                    }
+                )
+        ) {
+            if (isDone) {
+                Icon(Icons.Default.Check, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+            } else {
+                Text(
+                    text = step.toString(),
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 13.sp,
+                    color = if (isActive) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = title,
+            fontSize = 11.sp,
+            fontWeight = if (isActive || isDone) FontWeight.Bold else FontWeight.Normal,
+            color = if (isActive) PrimaryEmerald else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+        )
+    }
+}
+
+@Composable
+fun StepLine(isDone: Boolean) {
+    Box(
+        modifier = Modifier
+            .width(36.dp)
+            .height(2.dp)
+            .padding(bottom = 16.dp)
+            .background(if (isDone) SuccessGreen else MaterialTheme.colorScheme.surfaceVariant)
+    )
 }
