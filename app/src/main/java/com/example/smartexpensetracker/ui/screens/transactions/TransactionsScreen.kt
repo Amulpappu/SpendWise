@@ -46,6 +46,7 @@ fun TransactionsScreen(
     var transactionToEdit by remember { mutableStateOf<TransactionEntity?>(null) }
     var showEditDialog by remember { mutableStateOf(false) }
     var showDateRangePicker by remember { mutableStateOf(false) }
+    var selectedTxnForDetails by remember { mutableStateOf<TransactionEntity?>(null) }
 
     val dateRangePickerState = rememberDateRangePickerState(
         initialSelectedStartDateMillis = selectedStartDate,
@@ -63,7 +64,7 @@ fun TransactionsScreen(
                 fullDateFormat.format(Date(selectedStartDate!!))
             }
         } else {
-            "Between Dates ðŸ“…"
+            "Between Dates ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã¢â‚¬Â¦"
         }
     }
 
@@ -213,14 +214,14 @@ fun TransactionsScreen(
                 FilterChip(
                     selected = selectedType == "Expense",
                     onClick = { viewModel.selectedTypeFilter.value = if (selectedType == "Expense") null else "Expense" },
-                    label = { Text("Expenses (Debited ðŸ”´)") },
+                    label = { Text("Expenses (Debited ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â´)") },
                     modifier = Modifier.padding(end = 6.dp)
                 )
 
                 FilterChip(
                     selected = selectedType == "Income",
                     onClick = { viewModel.selectedTypeFilter.value = if (selectedType == "Income") null else "Income" },
-                    label = { Text("Income (Credited ðŸŸ¢)") },
+                    label = { Text("Income (Credited ÃƒÂ°Ã…Â¸Ã…Â¸Ã‚Â¢)") },
                     modifier = Modifier.padding(end = 6.dp)
                 )
 
@@ -285,7 +286,7 @@ fun TransactionsScreen(
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                 )
                 Text(
-                    text = "Net: ${if (totalSum >= 0) "+" else "-"}â‚¹${String.format(Locale.getDefault(), "%,.2f", Math.abs(totalSum))}",
+                    text = "Net: ${if (totalSum >= 0) "+" else "-"}ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¹${String.format(Locale.getDefault(), "%,.2f", Math.abs(totalSum))}",
                     style = MaterialTheme.typography.labelLarge.copy(
                         fontWeight = FontWeight.Bold,
                         color = if (totalSum >= 0) SuccessGreen else MaterialTheme.colorScheme.error
@@ -324,7 +325,7 @@ fun TransactionsScreen(
                     contentPadding = PaddingValues(bottom = 80.dp)
                 ) {
                                         items(filteredTxns, key = { it.id }) { txn ->
-                        val emoji = categories.find { it.name.equals(txn.category, ignoreCase = true) }?.emoji ?: "🏷️"
+                        val emoji = categories.find { it.name.equals(txn.category, ignoreCase = true) }?.emoji ?: "Ã°Å¸ÂÂ·Ã¯Â¸Â"
                         TransactionItem(
                             transaction = txn,
                             categoryEmoji = emoji,
@@ -390,11 +391,12 @@ fun TransactionsScreen(
     }
 
     if (selectedTxnForDetails != null) {
-        val emoji = categories.find { it.name.equals(selectedTxnForDetails?.category, ignoreCase = true) }?.emoji ?: "🏷️"
+        val currentTxn = selectedTxnForDetails!!
+        val emoji = categories.find { it.name.equals(currentTxn.category, ignoreCase = true) }?.emoji ?: "ðŸ·ï¸"
         TransactionDetailDialog(
-            transaction = selectedTxnForDetails!!,
+            transaction = currentTxn,
             categoryEmoji = emoji,
-            currencySymbol = "₹",
+            currencySymbol = "â‚¹",
             onDismiss = { selectedTxnForDetails = null },
             onEdit = {
                 val t = it
