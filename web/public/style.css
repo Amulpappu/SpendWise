@@ -848,3 +848,26 @@ body {
     display: none;
   }
 }
+
+.brand-logo-img {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  object-fit: cover;
+  border: 1.5px solid rgba(0, 229, 153, 0.4);
+  box-shadow: 0 0 15px rgba(0, 229, 153, 0.3);
+}
+
+.footer-logo-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.footer-logo-img {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid rgba(0, 229, 153, 0.3);
+}
