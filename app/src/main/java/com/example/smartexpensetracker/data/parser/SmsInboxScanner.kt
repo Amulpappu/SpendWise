@@ -35,7 +35,7 @@ object SmsInboxScanner {
         val count = scanInbox(context, maxMessages = 3000)
 
         // Bulk sync all scanned transactions to Google Sheets immediately
-        val allTxns = repository.getAllTransactions()
+        val allTxns = repository.getAllTransactionsSync()
         if (allTxns.isNotEmpty()) {
             GoogleSheetsSyncManager.syncAllTransactionsToSheet(context.applicationContext, allTxns)
         }
@@ -90,7 +90,7 @@ object SmsInboxScanner {
                 }
 
                 // Immediately bulk sync all transactions to Google Sheets in a single fast batch
-                val allTxns = repository.getAllTransactions()
+                val allTxns = repository.getAllTransactionsSync()
                 Log.d("SmsInboxScanner", "Total transactions in DB after scan: ${allTxns.size}")
                 if (allTxns.isNotEmpty()) {
                     GoogleSheetsSyncManager.syncAllTransactionsToSheet(context.applicationContext, allTxns)
