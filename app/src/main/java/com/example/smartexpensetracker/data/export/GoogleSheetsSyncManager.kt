@@ -12,7 +12,7 @@ import java.util.*
 
 object GoogleSheetsSyncManager {
 
-    const val DEFAULT_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbzn73PYrhFuWrVQEDaLPLzP6FIXqD-elT3AEDyZvnT_D1mjJt8diVEliKAqKdibrO3e9Q/exec"
+    const val DEFAULT_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbyPkrYm3lRdmDZ2qJfIDxhvoL3BuYQWgn2nS13X2eC_H55rkdtCQshDgsDcsEKZNRYnaQ/exec"
     private const val PREFS_NAME = "google_sheets_prefs"
     private const val KEY_WEBHOOK_URL = "webhook_url"
     private const val KEY_AUTO_SYNC = "auto_sync_enabled"
