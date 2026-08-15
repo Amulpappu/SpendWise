@@ -73,7 +73,7 @@ fun DashboardScreen(
     var txnToEdit by remember { mutableStateOf<TransactionEntity?>(null) }
 
     val budget = budgetEntity?.totalBudget ?: 0.0
-    val currency = budgetEntity?.currencySymbol ?: "â‚¹"
+    val currency = budgetEntity?.currencySymbol ?: "Ã¢â€šÂ¹"
     val netBalance = totalIncome - totalExpense
     val usedPct = if (budget > 0) ((totalExpense / budget) * 100).toInt().coerceIn(0, 100) else 0
 
@@ -248,7 +248,7 @@ fun DashboardScreen(
                                 isSyncingSheet = true
                                 val synced = com.example.smartexpensetracker.data.export.GoogleSheetsSyncManager.syncAllTransactionsToSheet(context, allTransactions)
                                 isSyncingSheet = false
-                                Toast.makeText(context, "âœ… Synced $synced historical transactions to Google Sheet!", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, "Ã¢Å“â€¦ Synced $synced historical transactions to Google Sheet!", Toast.LENGTH_SHORT).show()
                             }
                         }
                     )
@@ -369,7 +369,7 @@ fun DashboardScreen(
                         Text(
                             text = if (showBalance) {
                                 if (latestBankBal != null) "$currency${String.format("%,.2f", latestBankBal)}" else "$currency${String.format("%,.2f", (353.35).coerceAtLeast(netBalance))}"
-                            } else "â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢",
+                            } else "Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢",
                             style = MaterialTheme.typography.headlineLarge.copy(fontSize = 32.sp, fontWeight = FontWeight.Black),
                             color = PrimaryEmeraldLight
                         )
@@ -502,7 +502,7 @@ fun DashboardScreen(
                 )
 
                 Text(
-                    text = "View All â†’",
+                    text = "View All Ã¢â€ â€™",
                     style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
                     color = PrimaryEmerald,
                     modifier = Modifier.clickable(onClick = onNavigateToTransactions)
@@ -553,7 +553,7 @@ fun DashboardScreen(
             } else {
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                         filteredTransactions.take(8).forEach { txn ->
-                        val emoji = categories.find { it.name.equals(txn.category, ignoreCase = true) }?.emoji ?: "🏷️"
+                        val emoji = categories.find { it.name.equals(txn.category, ignoreCase = true) }?.emoji ?: "ðŸ·ï¸"
                         TransactionItem(
                             transaction = txn,
                             categoryEmoji = emoji,
@@ -568,42 +568,7 @@ fun DashboardScreen(
             Spacer(modifier = Modifier.height(70.dp))
         }
     }
-}
 
-@Composable
-fun QuickServiceTile(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    label: String,
-    color: Color,
-    onClick: () -> Unit
-) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier
-            .clip(RoundedCornerShape(12.dp))
-            .clickable(onClick = onClick)
-            .padding(horizontal = 8.dp, vertical = 6.dp)
-    ) {
-        Box(
-            modifier = Modifier
-                .size(46.dp)
-                .clip(CircleShape)
-                .background(color.copy(alpha = 0.16f)),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = label,
-                tint = color,
-                modifier = Modifier.size(24.dp)
-            )
-        }
-        Spacer(modifier = Modifier.height(6.dp))
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
-            fontSize = 11.sp
-        )
     if (selectedTxnForDetails != null) {
         val emoji = categories.find { it.name.equals(selectedTxnForDetails?.category, ignoreCase = true) }?.emoji ?: "🏷️"
         TransactionDetailDialog(
@@ -640,6 +605,43 @@ fun QuickServiceTile(
                 viewModel.updateTransaction(updated)
                 txnToEdit = null
             }
+        )
+    }
+}
+
+@Composable
+fun QuickServiceTile(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    color: Color,
+    onClick: () -> Unit
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 8.dp, vertical = 6.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(46.dp)
+                .clip(CircleShape)
+                .background(color.copy(alpha = 0.16f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = label,
+                tint = color,
+                modifier = Modifier.size(24.dp)
+            )
+        }
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
+            fontSize = 11.sp
         )
     }
 }
