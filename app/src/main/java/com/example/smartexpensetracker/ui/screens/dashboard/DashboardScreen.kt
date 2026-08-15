@@ -1,7 +1,6 @@
-package com.example.smartexpensetracker.ui.screens.dashboard
+﻿package com.example.smartexpensetracker.ui.screens.dashboard
 
 import java.util.Locale
-
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Image
@@ -14,6 +13,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.HelpOutline
+import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -31,12 +32,7 @@ import androidx.compose.ui.unit.sp
 import com.example.smartexpensetracker.R
 import com.example.smartexpensetracker.data.model.BankDirectory
 import com.example.smartexpensetracker.data.local.entity.TransactionEntity
-import com.example.smartexpensetracker.ui.components.AddEditTransactionDialog
-import com.example.smartexpensetracker.ui.components.CategoryPieChart
-import com.example.smartexpensetracker.ui.components.MetricCard
-import com.example.smartexpensetracker.ui.components.SpendingTrendChart
-import com.example.smartexpensetracker.ui.components.TransactionDetailDialog
-import com.example.smartexpensetracker.ui.components.TransactionItem
+import com.example.smartexpensetracker.ui.components.*
 import com.example.smartexpensetracker.ui.theme.*
 import com.example.smartexpensetracker.ui.viewmodel.MainViewModel
 import kotlinx.coroutines.launch
@@ -45,22 +41,17 @@ import kotlinx.coroutines.launch
 @Composable
 fun DashboardScreen(
     viewModel: MainViewModel,
-    onAddTransactionClick: () -> Unit,
-    onNavigateToProfile: () -> Unit,
-    onNavigateToHelp: () -> Unit,
     onNavigateToTransactions: () -> Unit,
-    onNavigateToReports: () -> Unit
+    onNavigateToReports: () -> Unit,
+    onAddTransactionClick: () -> Unit,
+    onScanSmsClick: () -> Unit
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
 
-    val totalExpense by viewModel.totalMonthlyExpenses.collectAsState()
-    val totalIncome by viewModel.totalMonthlyIncome.collectAsState()
     val allTransactions by viewModel.allTransactions.collectAsState()
-    val categories by viewModel.categories.collectAsState()
-    val budgetEntity by viewModel.monthlyBudget.collectAsState()
-    val categoryMap by viewModel.categoryExpenseMap.collectAsState()
-    val dailyTrend by viewModel.dailyTrendData.collectAsState()
+    val totalExpense by viewModel.totalExpense.collectAsState()
+    val totalIncome by viewModel.totalIncome.collectAsState()
     val todaySpent by viewModel.todaySpending.collectAsState()
     val weekSpent by viewModel.weekSpending.collectAsState()
     val latestBankBal by viewModel.latestBankBalance.collectAsState()
@@ -74,6 +65,11 @@ fun DashboardScreen(
     var selectedTxnForDetails by remember { mutableStateOf<TransactionEntity?>(null) }
     var txnToEdit by remember { mutableStateOf<TransactionEntity?>(null) }
 
+    val budgetEntity by viewModel.monthlyBudget.collectAsState()
+    val categories by viewModel.categories.collectAsState()
+    val categoryMap by viewModel.categorySpendingMap.collectAsState()
+    val dailyTrend by viewModel.dailySpendingTrend.collectAsState()
+
     val budget = budgetEntity?.totalBudget ?: 0.0
     val currency = "\u20B9"
     val netBalance = totalIncome - totalExpense
@@ -83,158 +79,143 @@ fun DashboardScreen(
         BankDirectory.getBankByCodeOrName(userProfile.bankName)
     }
 
-    // Filter transactions by Search Query & Type
     val filteredTransactions = remember(allTransactions, searchQuery, selectedFilter) {
         allTransactions.filter { txn ->
-            val matchesQuery = searchQuery.isBlank() ||
-                    txn.merchant.contains(searchQuery, ignoreCase = true) ||
-                    txn.category.contains(searchQuery, ignoreCase = true) ||
-                    txn.amount.toString().contains(searchQuery) ||
-                    txn.note.contains(searchQuery, ignoreCase = true) ||
-                    txn.paymentMethod.contains(searchQuery, ignoreCase = true)
-
-            val matchesFilter = when (selectedFilter) {
+            val matchesSearch = if (searchQuery.isBlank()) true else {
+                txn.merchant.contains(searchQuery, ignoreCase = true) ||
+                txn.category.contains(searchQuery, ignoreCase = true) ||
+                (txn.bankName?.contains(searchQuery, ignoreCase = true) == true) ||
+                (txn.accountNumber?.contains(searchQuery, ignoreCase = true) == true)
+            }
+            val matchesType = when (selectedFilter) {
                 "Expense" -> !txn.isIncome
                 "Income" -> txn.isIncome
                 else -> true
             }
-
-            matchesQuery && matchesFilter
+            matchesSearch && matchesType
         }
     }
 
     Scaffold(
         floatingActionButton = {
-            ExtendedFloatingActionButton(
+            FloatingActionButton(
                 onClick = onAddTransactionClick,
-                icon = { Icon(Icons.Default.Add, contentDescription = "Add") },
-                text = { Text("Add Expense", fontWeight = FontWeight.Bold) },
                 containerColor = PrimaryEmerald,
-                contentColor = MaterialTheme.colorScheme.surface,
-                shape = RoundedCornerShape(16.dp)
-            )
+                contentColor = Color.Black,
+                shape = RoundedCornerShape(18.dp),
+                elevation = FloatingActionButtonDefaults.elevation(8.dp)
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = "Add", modifier = Modifier.size(20.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Add Expense", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                }
+            }
         }
-    ) { paddingValues ->
+    ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
+                .padding(padding)
+                .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp)
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
             // ==========================================
-            // 1. PAYTM-STYLE TOP APP HEADER WITH SEARCH & HELP
+            // 1. TOP HEADER & SEARCH BAR
             // ==========================================
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                // Profile Avatar with Verified Shield (Tap -> Profile)
+                // Profile Initials / Avatar
                 Box(
                     modifier = Modifier
-                        .size(46.dp)
-                        .clickable(onClick = onNavigateToProfile)
+                        .size(44.dp)
+                        .clip(CircleShape)
+                        .background(PrimaryEmerald),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(44.dp)
-                            .clip(CircleShape)
-                            .background(PrimaryEmerald),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = userProfile.userName.take(2).uppercase().ifBlank { "ME" },
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 16.sp,
-                            color = MaterialTheme.colorScheme.surface
-                        )
-                    }
-                    // Verified Badge overlay
-                    Box(
-                        modifier = Modifier
-                            .size(16.dp)
-                            .align(Alignment.BottomEnd)
-                            .clip(CircleShape)
-                            .background(SuccessGreen),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Check,
-                            contentDescription = "Verified",
-                            tint = Color.White,
-                            modifier = Modifier.size(10.dp)
-                        )
-                    }
+                    Text(
+                        text = if (userProfile.userName.isNotBlank()) userProfile.userName.take(2).uppercase() else "LO",
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Black,
+                        fontSize = 16.sp
+                    )
                 }
 
-                Spacer(modifier = Modifier.width(10.dp))
+                Spacer(modifier = Modifier.width(12.dp))
 
-                // Paytm-style Search Bar
+                // Search Bar Field
                 OutlinedTextField(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
                     placeholder = { Text("Search Payees, Banks...", fontSize = 13.sp) },
-                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search", tint = PrimaryEmerald, modifier = Modifier.size(20.dp)) },
+                    leadingIcon = {
+                        Icon(Icons.Default.Search, contentDescription = "Search", modifier = Modifier.size(18.dp))
+                    },
                     trailingIcon = {
                         if (searchQuery.isNotEmpty()) {
                             IconButton(onClick = { searchQuery = "" }) {
-                                Icon(Icons.Default.Close, contentDescription = "Clear", modifier = Modifier.size(18.dp))
+                                Icon(Icons.Default.Close, contentDescription = "Clear", modifier = Modifier.size(16.dp))
                             }
                         }
                     },
-                    shape = RoundedCornerShape(24.dp),
-                    singleLine = true,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-                        focusedBorderColor = PrimaryEmerald,
-                        unfocusedBorderColor = Color.Transparent
-                    ),
                     modifier = Modifier
                         .weight(1f)
-                        .height(48.dp)
+                        .height(50.dp),
+                    shape = RoundedCornerShape(24.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = PrimaryEmerald,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f),
+                        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f)
+                    ),
+                    singleLine = true
                 )
 
-                Spacer(modifier = Modifier.width(10.dp))
+                Spacer(modifier = Modifier.width(8.dp))
 
-                // Paytm 24x7 Help & Support Shortcut Icon
+                // Help/Info Icon
                 IconButton(
-                    onClick = onNavigateToHelp,
+                    onClick = onScanSmsClick,
                     modifier = Modifier
                         .size(44.dp)
                         .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f))
                 ) {
                     Icon(
-                        imageVector = Icons.Default.HelpOutline,
-                        contentDescription = "24x7 Help & Support",
+                        imageVector = Icons.AutoMirrored.Filled.HelpOutline,
+                        contentDescription = "Help",
                         tint = PrimaryEmerald
                     )
                 }
             }
 
+            Spacer(modifier = Modifier.height(16.dp))
+
             // ==========================================
-            // 2. PAYTM-STYLE QUICK ACTION SERVICES GRID
+            // 2. QUICK ACTIONS ROW
             // ==========================================
             Card(
                 shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.28f)),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 12.dp, horizontal = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceAround,
+                        .padding(horizontal = 8.dp, vertical = 12.dp),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     // Service 1: Passbook / History
                     QuickServiceTile(
-                        icon = Icons.Default.ReceiptLong,
+                        icon = Icons.AutoMirrored.Filled.ReceiptLong,
                         label = "Passbook",
                         color = Color(0xFF38BDF8),
                         onClick = onNavigateToTransactions
@@ -250,7 +231,7 @@ fun DashboardScreen(
                                 isSyncingSheet = true
                                 val synced = com.example.smartexpensetracker.data.export.GoogleSheetsSyncManager.syncAllTransactionsToSheet(context, allTransactions)
                                 isSyncingSheet = false
-                                Toast.makeText(context, "Synced $synced historical transactions to Google Sheet!", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, "Synced $synced transactions to Google Sheet!", Toast.LENGTH_SHORT).show()
                             }
                         }
                     )
@@ -278,8 +259,10 @@ fun DashboardScreen(
                 }
             }
 
+            Spacer(modifier = Modifier.height(16.dp))
+
             // ==========================================
-            // 3. PAYTM BANK ACCOUNT & LIVE BALANCE HERO CARD
+            // 3. BANK ACCOUNT & LIVE BALANCE HERO CARD
             // ==========================================
             Card(
                 shape = RoundedCornerShape(24.dp),
@@ -291,60 +274,46 @@ fun DashboardScreen(
             ) {
                 Box(
                     modifier = Modifier
+                        .fillMaxWidth()
                         .background(
                             Brush.linearGradient(
-                                listOf(
-                                    Color(0xFF0F2027), // Deep Dark Teal
-                                    Color(0xFF203A43), // Mid Slate Teal
-                                    Color(0xFF2C5364)  // Slate Blue
+                                colors = listOf(
+                                    Color(0xFF0F2027),
+                                    Color(0xFF203A43),
+                                    Color(0xFF2C5364)
                                 )
                             )
                         )
                         .padding(20.dp)
                 ) {
                     Column {
-                        // Bank Header Row with Official Vector Logo
+                        // Bank Header Row
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                if (matchedBank?.logoResId != null) {
-                                    Image(
-                                        painter = painterResource(matchedBank.logoResId),
-                                        contentDescription = matchedBank.name,
-                                        modifier = Modifier
-                                            .size(36.dp)
-                                            .clip(RoundedCornerShape(8.dp))
-                                    )
-                                } else {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(36.dp)
-                                            .clip(RoundedCornerShape(8.dp))
-                                            .background(PrimaryEmerald),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Text(
-                                            text = userProfile.bankName.take(3).uppercase().ifBlank { "BNK" },
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 10.sp,
-                                            color = Color.White
-                                        )
-                                    }
+                                Box(
+                                    modifier = Modifier
+                                        .size(38.dp)
+                                        .clip(CircleShape)
+                                        .background(PrimaryEmerald),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text("🏛️", fontSize = 18.sp)
                                 }
 
                                 Spacer(modifier = Modifier.width(10.dp))
 
                                 Column {
                                     Text(
-                                        text = userProfile.bankName.ifBlank { "Primary Bank Account" },
+                                        text = if (userProfile.bankName.isNotBlank()) userProfile.bankName else "Tamilnad Mercantile Bank (TMB)",
                                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                                         color = Color.White
                                     )
                                     Text(
-                                        text = "A/c No: ${latestAccNo ?: userProfile.accountNumber.ifBlank { "XXXX 305779" }}",
+                                        text = "A/c No: ${latestAccNo ?: (if (userProfile.accountNumber.isNotBlank()) userProfile.accountNumber else "XXXX5779")}",
                                         style = MaterialTheme.typography.bodySmall,
                                         color = Color.White.copy(alpha = 0.7f)
                                     )
@@ -388,44 +357,44 @@ fun DashboardScreen(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            // Income Block
+                            // Income Pill
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Box(
                                     modifier = Modifier
                                         .size(32.dp)
                                         .clip(CircleShape)
-                                        .background(PrimaryEmerald.copy(alpha = 0.25f)),
+                                        .background(PrimaryEmerald.copy(alpha = 0.2f)),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    Icon(Icons.Default.ArrowDownward, contentDescription = "Income", tint = PrimaryEmeraldLight, modifier = Modifier.size(18.dp))
+                                    Icon(Icons.Default.ArrowDownward, contentDescription = null, tint = PrimaryEmeraldLight, modifier = Modifier.size(16.dp))
                                 }
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Column {
                                     Text("Income", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.7f))
                                     Text(
-                                        text = "+$currency${String.format("%,.2f", totalIncome)}",
+                                        text = "+$currency${String.format(Locale.US, "%,.2f", totalIncome)}",
                                         style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
                                         color = PrimaryEmeraldLight
                                     )
                                 }
                             }
 
-                            // Expense Block
+                            // Expense Pill
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Box(
                                     modifier = Modifier
                                         .size(32.dp)
                                         .clip(CircleShape)
-                                        .background(DangerRed.copy(alpha = 0.25f)),
+                                        .background(DangerRed.copy(alpha = 0.2f)),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    Icon(Icons.Default.ArrowUpward, contentDescription = "Expense", tint = DangerRed, modifier = Modifier.size(18.dp))
+                                    Icon(Icons.Default.ArrowUpward, contentDescription = null, tint = DangerRed, modifier = Modifier.size(16.dp))
                                 }
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Column {
                                     Text("Spent", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.7f))
                                     Text(
-                                        text = "-$currency${String.format("%,.2f", totalExpense)}",
+                                        text = "-$currency${String.format(Locale.US, "%,.2f", totalExpense)}",
                                         style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
                                         color = DangerRed
                                     )
@@ -439,14 +408,14 @@ fun DashboardScreen(
                                 progress = { (usedPct / 100f).coerceIn(0f, 1f) },
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(5.dp)
+                                    .height(6.dp)
                                     .clip(RoundedCornerShape(3.dp)),
-                                color = if (usedPct > 90) DangerRed else PrimaryEmeraldLight,
+                                color = if (usedPct > 90) DangerRed else PrimaryEmerald,
                                 trackColor = Color.White.copy(alpha = 0.2f)
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = "Budget: $currency${String.format("%,d", budget.toInt())} ($usedPct% Used)",
+                                text = "Budget: $currency${String.format(Locale.US, "%,d", budget.toInt())} ($usedPct% Used)",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = Color.White.copy(alpha = 0.65f)
                             )
@@ -455,25 +424,32 @@ fun DashboardScreen(
                 }
             }
 
+            Spacer(modifier = Modifier.height(16.dp))
+
             // ==========================================
-            // 4. QUICK METRICS OVERVIEW
+            // 4. METRIC CARDS ROW
             // ==========================================
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
                 MetricCard(
                     title = "Today's Spent",
-                    value = "$currency${String.format("%,.2f", todaySpent)}",
+                    value = "$currency${String.format(Locale.US, "%,.2f", todaySpent)}",
                     icon = Icons.Default.ShoppingCart,
                     modifier = Modifier.weight(1f),
                     accentColor = WarningYellow
                 )
                 MetricCard(
                     title = "This Week",
-                    value = "$currency${String.format("%,.2f", weekSpent)}",
+                    value = "$currency${String.format(Locale.US, "%,.2f", weekSpent)}",
                     icon = Icons.Default.CalendarMonth,
                     modifier = Modifier.weight(1f),
                     accentColor = Color(0xFF38BDF8)
                 )
             }
+
+            Spacer(modifier = Modifier.height(16.dp))
 
             // Spending by Category Chart
             if (categoryMap.isNotEmpty()) {
@@ -491,7 +467,7 @@ fun DashboardScreen(
             }
 
             // ==========================================
-            // 5. PAYTM-STYLE TRANSACTIONS LEDGER & FILTER
+            // 5. TRANSACTIONS LEDGER & FILTER
             // ==========================================
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -499,17 +475,19 @@ fun DashboardScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = if (searchQuery.isNotBlank()) "Search Results (${filteredTransactions.size})" else "\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022",
+                    text = if (searchQuery.isNotBlank()) "Search Results (${filteredTransactions.size})" else "Recent Transactions",
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
                 )
 
                 Text(
-                    text = "View All ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾Ãƒâ€šÃ‚Â¢",
+                    text = "View All →",
                     style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
                     color = PrimaryEmerald,
                     modifier = Modifier.clickable(onClick = onNavigateToTransactions)
                 )
             }
+
+            Spacer(modifier = Modifier.height(8.dp))
 
             // Filter Chips (All, Spends, Income)
             Row(
@@ -533,6 +511,8 @@ fun DashboardScreen(
                 )
             }
 
+            Spacer(modifier = Modifier.height(10.dp))
+
             if (filteredTransactions.isEmpty()) {
                 Card(
                     shape = RoundedCornerShape(16.dp),
@@ -546,7 +526,7 @@ fun DashboardScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = if (searchQuery.isNotBlank()) "No transaction matching \"$searchQuery\"" else "\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022",
+                            text = if (searchQuery.isNotBlank()) "No transaction matching \"$searchQuery\"" else "No transactions yet. Scan SMS to get started!",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                         )
@@ -554,11 +534,12 @@ fun DashboardScreen(
                 }
             } else {
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                        filteredTransactions.take(8).forEach { txn ->
-                        val emoji = categories.find { it.name.equals(txn.category, ignoreCase = true) }?.emoji ?: "ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â·ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¯ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â"
+                    filteredTransactions.take(8).forEach { txn ->
+                        val emoji = categories.find { it.name.equals(txn.category, ignoreCase = true) }?.emoji ?: "🏷️"
                         TransactionItem(
                             transaction = txn,
                             categoryEmoji = emoji,
+                            currencySymbol = currency,
                             onClick = { selectedTxnForDetails = it },
                             onEdit = { txnToEdit = it },
                             onDelete = { viewModel.deleteTransaction(it) }
@@ -572,7 +553,7 @@ fun DashboardScreen(
     }
 
     if (selectedTxnForDetails != null) {
-        val emoji = categories.find { it.name.equals(selectedTxnForDetails?.category, ignoreCase = true) }?.emoji ?: "ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â·ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¸Ãƒâ€šÃ‚Â"
+        val emoji = categories.find { it.name.equals(selectedTxnForDetails?.category, ignoreCase = true) }?.emoji ?: "🏷️"
         TransactionDetailDialog(
             transaction = selectedTxnForDetails!!,
             categoryEmoji = emoji,
