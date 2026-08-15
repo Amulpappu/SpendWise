@@ -4,6 +4,7 @@ import android.content.Context
 import android.database.Cursor
 import android.net.Uri
 import android.provider.Telephony
+import android.util.Log
 import com.example.smartexpensetracker.data.export.GoogleSheetsSyncManager
 import com.example.smartexpensetracker.data.local.AppDatabase
 import com.example.smartexpensetracker.data.repository.ExpenseRepositoryImpl
@@ -14,7 +15,6 @@ object SmsInboxScanner {
 
     suspend fun clearAndRescanBankSms(context: Context): Int = withContext(Dispatchers.IO) {
         val db = AppDatabase.getDatabase(context.applicationContext)
-        // Clear old transactions to purge false spam data
         val writable = db.writableDatabase
         writable.delete("transactions", null, null)
         db.refreshTransactions()
@@ -28,17 +28,22 @@ object SmsInboxScanner {
             "Dear Customer, Ur SB305779 is credited with Rs.10000.00 on 13-08-2026 12:05:27 by KARUPPASAMY PANDIYAN from FDRL bank via IMPS RefNo: 622512561264.. Avbl Bal Rs.50278.35 -TMB"
         )
         for (msg in rcsIncomeMessages) {
-            val entity = repository.processIncomingText(msg, source = "SMS (TMBANK)")
-            if (entity != null && GoogleSheetsSyncManager.isAutoSyncEnabled(context.applicationContext)) {
-                GoogleSheetsSyncManager.syncTransactionToSheet(context.applicationContext, entity)
-            }
+            repository.processIncomingText(msg, source = "SMS (TMBANK)")
         }
 
         // Rescan strictly authorized bank senders with expanded depth
-        scanInbox(context, maxMessages = 2000)
+        val count = scanInbox(context, maxMessages = 3000)
+
+        // Bulk sync all scanned transactions to Google Sheets immediately
+        val allTxns = repository.getAllTransactions()
+        if (allTxns.isNotEmpty()) {
+            GoogleSheetsSyncManager.syncAllTransactionsToSheet(context.applicationContext, allTxns)
+        }
+
+        count
     }
 
-    suspend fun scanInbox(context: Context, maxMessages: Int = 2000): Int = withContext(Dispatchers.IO) {
+    suspend fun scanInbox(context: Context, maxMessages: Int = 3000): Int = withContext(Dispatchers.IO) {
         var importedCount = 0
         val uri: Uri = Telephony.Sms.CONTENT_URI
         val projection = arrayOf(
@@ -73,7 +78,7 @@ object SmsInboxScanner {
 
                     if (body.isEmpty()) continue
 
-                    // Strict sender / bank content filter: Only process authorized bank senders (TMBANK, *-TMBANK-S, PAYTM, etc.)
+                    // Strict sender / bank content filter
                     if (!TransactionParser.isAuthorizedSender(address, body)) {
                         continue
                     }
@@ -81,10 +86,14 @@ object SmsInboxScanner {
                     val entity = repository.processIncomingText(body, source = "SMS ($address)", fallbackTimestamp = date)
                     if (entity != null && !entity.isDuplicate) {
                         importedCount++
-                        if (GoogleSheetsSyncManager.isAutoSyncEnabled(context.applicationContext)) {
-                            GoogleSheetsSyncManager.syncTransactionToSheet(context.applicationContext, entity)
-                        }
                     }
+                }
+
+                // Immediately bulk sync all transactions to Google Sheets in a single fast batch
+                val allTxns = repository.getAllTransactions()
+                Log.d("SmsInboxScanner", "Total transactions in DB after scan: ${allTxns.size}")
+                if (allTxns.isNotEmpty()) {
+                    GoogleSheetsSyncManager.syncAllTransactionsToSheet(context.applicationContext, allTxns)
                 }
             }
         } catch (e: Exception) {
