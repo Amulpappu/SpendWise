@@ -643,23 +643,24 @@ class AppDatabase private constructor(context: Context) : SQLiteOpenHelper(
         }
 
         val DEFAULT_CATEGORIES = listOf(
-            CategoryEntity("Groceries", "🥦", true),
-            CategoryEntity("Food", "🍔", true),
-            CategoryEntity("Recharge & Bills", "📱", true),
-            CategoryEntity("Shopping", "🛒", true),
-            CategoryEntity("Transport", "🚌", true),
-            CategoryEntity("Entertainment", "🎬", true),
-            CategoryEntity("Gaming", "🎮", true),
-            CategoryEntity("Salary", "💼", true),
-            CategoryEntity("Income", "💵", true),
-            CategoryEntity("Education", "🎓", true),
-            CategoryEntity("Bills", "💡", true),
-            CategoryEntity("Subscriptions", "🔄", true),
-            CategoryEntity("Travel", "✈️", true),
-            CategoryEntity("Medical", "🏥", true),
-            CategoryEntity("Technology", "💻", true),
-            CategoryEntity("Home", "🏠", true),
-            CategoryEntity("Other", "💰", true)
+            CategoryEntity("Friends", "👥", true),
+            CategoryEntity("Groceries", "ðŸ¥¦", true),
+            CategoryEntity("Food", "ðŸ”", true),
+            CategoryEntity("Recharge & Bills", "ðŸ“±", true),
+            CategoryEntity("Shopping", "ðŸ›’", true),
+            CategoryEntity("Transport", "ðŸšŒ", true),
+            CategoryEntity("Entertainment", "ðŸŽ¬", true),
+            CategoryEntity("Gaming", "ðŸŽ®", true),
+            CategoryEntity("Salary", "ðŸ’¼", true),
+            CategoryEntity("Income", "ðŸ’µ", true),
+            CategoryEntity("Education", "ðŸŽ“", true),
+            CategoryEntity("Bills", "ðŸ’¡", true),
+            CategoryEntity("Subscriptions", "ðŸ”„", true),
+            CategoryEntity("Travel", "âœˆï¸", true),
+            CategoryEntity("Medical", "ðŸ¥", true),
+            CategoryEntity("Technology", "ðŸ’»", true),
+            CategoryEntity("Home", "ðŸ ", true),
+            CategoryEntity("Other", "ðŸ’°", true)
         )
     }
 }

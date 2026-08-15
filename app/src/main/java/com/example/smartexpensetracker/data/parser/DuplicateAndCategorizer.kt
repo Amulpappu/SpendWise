@@ -77,7 +77,11 @@ class Categorizer(private val merchantRuleDao: MerchantRuleDao) {
         val combinedText = "$upperMerchant $sanitizedRaw"
 
         return when {
+            // Friends, Family & Direct P2P Personal Transfers
+            isPersonalFriendTransfer(upperMerchant, combinedText) -> "Friends"
+
             // Groceries & Daily Needs
+            containsWord(combinedText, listOf("GROCERY", "GROCERIES", "BLINKIT", "ZEPTO", "INSTAMART", "BIGBASKET", "DMART", "NATURES BASKET", "SUPERMARKET", "PROVISION", "KIRANA", "VEGETABLE", "FRUITS", "DAIRY", "MILK", "COUNTRY DELIGHT", "SPENCERS", "MORE RETAIL", "STORES", "STORE", "MART")) -> "Groceries"
             containsWord(combinedText, listOf("GROCERY", "GROCERIES", "BLINKIT", "ZEPTO", "INSTAMART", "BIGBASKET", "DMART", "NATURES BASKET", "SUPERMARKET", "PROVISION", "KIRANA", "VEGETABLE", "FRUITS", "DAIRY", "MILK", "COUNTRY DELIGHT", "SPENCERS", "MORE RETAIL", "STORES", "STORE", "MART")) -> "Groceries"
 
             // Food, Dining & Snacks
@@ -118,6 +122,37 @@ class Categorizer(private val merchantRuleDao: MerchantRuleDao) {
 
             else -> "Other"
         }
+    }
+
+    private fun isPersonalFriendTransfer(merchant: String, combinedText: String): Boolean {
+        // Direct keywords
+        if (containsWord(combinedText, listOf("FRIEND", "FRIENDS", "FAMILY", "BROTHER", "SISTER", "MOM", "DAD", "COLLEAGUE", "ROOMMATE", "TRANSFER TO", "SENT TO", "PERSONAL"))) {
+            return true
+        }
+
+        // Check if commercial / merchant keywords exist
+        val commercialKeywords = listOf("MART", "STORE", "SHOP", "RESTAURANT", "HOTEL", "CAFE", "BAKERY", "TEA", "CHAI", "SWEETS", "SWIGGY", "ZOMATO", "BLINKIT", "ZEPTO", "AMAZON", "FLIPKART", "EKART", "PAYTMQR", "BHARATPE", "MERCHANT", "PVT", "LTD", "SOLUT", "SERVICES", "PETROL", "BILLS", "RECHARGE", "AIRTEL", "JIO")
+        for (ck in commercialKeywords) {
+            if (combinedText.contains(ck, ignoreCase = true)) {
+                return false
+            }
+        }
+
+        // Phone number based VPA or contact (e.g. 9342934661, 9342934661@upi, q130896036@ybl)
+        if (merchant.matches(Regex("^[0-9]{10}.*")) || merchant.matches(Regex("^[A-Za-z0-9._-]+@(UPI|YBL|OKAXIS|OKSBI|OKICICI|OKHDFCBANK|PAYTM|IBL)$", RegexOption.IGNORE_CASE))) {
+            return true
+        }
+
+        // Personal human name with 2 or more words (e.g. "KARUPPASAMY PANDIYAN", "REJANDEREETA", "KAVIYAKAVIYA")
+        val cleanLettersOnly = merchant.replace(Regex("[^A-Za-z\\s]"), "").trim()
+        if (cleanLettersOnly.length >= 4 && !cleanLettersOnly.contains("BANK") && !cleanLettersOnly.contains("ACC")) {
+            val words = cleanLettersOnly.split(Regex("\\s+"))
+            if (words.size >= 2 || cleanLettersOnly.length >= 8) {
+                return true
+            }
+        }
+
+        return false
     }
 
     private fun containsWord(text: String, keywords: List<String>): Boolean {
