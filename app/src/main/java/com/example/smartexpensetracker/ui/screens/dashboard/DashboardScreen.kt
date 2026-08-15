@@ -44,14 +44,16 @@ fun DashboardScreen(
     onNavigateToTransactions: () -> Unit,
     onNavigateToReports: () -> Unit,
     onAddTransactionClick: () -> Unit,
-    onScanSmsClick: () -> Unit
+    onNavigateToProfile: () -> Unit = {},
+    onNavigateToHelp: () -> Unit = {},
+    onScanSmsClick: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
 
     val allTransactions by viewModel.allTransactions.collectAsState()
-    val totalExpense by viewModel.totalExpense.collectAsState()
-    val totalIncome by viewModel.totalIncome.collectAsState()
+    val totalExpense by viewModel.totalMonthlyExpenses.collectAsState()
+    val totalIncome by viewModel.totalMonthlyIncome.collectAsState()
     val todaySpent by viewModel.todaySpending.collectAsState()
     val weekSpent by viewModel.weekSpending.collectAsState()
     val latestBankBal by viewModel.latestBankBalance.collectAsState()
@@ -67,8 +69,8 @@ fun DashboardScreen(
 
     val budgetEntity by viewModel.monthlyBudget.collectAsState()
     val categories by viewModel.categories.collectAsState()
-    val categoryMap by viewModel.categorySpendingMap.collectAsState()
-    val dailyTrend by viewModel.dailySpendingTrend.collectAsState()
+    val categoryMap by viewModel.categoryExpenseMap.collectAsState()
+    val dailyTrend by viewModel.dailyTrendData.collectAsState()
 
     val budget = budgetEntity?.totalBudget ?: 0.0
     val currency = "\u20B9"
