@@ -3,6 +3,7 @@ package com.example.smartexpensetracker.data.parser
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.regex.Pattern
+import kotlin.math.abs
 
 data class ParsedTransaction(
     val amount: Double,
@@ -25,39 +26,52 @@ object TransactionParser {
 
     // Authorized bank senders list to reject spam / loan / scam SMS
     fun isAuthorizedSender(sender: String?, rawText: String? = null): Boolean {
-        if (sender.isNullOrEmpty()) return true // Allow local simulation / in-app entries / unit tests
-        if (!sender.isNullOrEmpty()) {
-            val s = sender.uppercase().replace("-", "").replace("_", "")
-            val isSenderAuth = s.contains("TMBANK") ||
-                    s.contains("TMBANKS") ||
-                    s.contains("TMB") ||
-                    s.contains("PAYTM") ||
-                    s.contains("PHONEPE") ||
-                    s.contains("GPAY") ||
-                    s.contains("CRED") ||
-                    s.contains("BHARATPE") ||
-                    s.contains("HDFC") ||
-                    s.contains("ICICI") ||
-                    s.contains("SBI") ||
-                    s.contains("AXIS") ||
-                    s.contains("KOTAK") ||
-                    s.contains("NOTIFICATION")
-            if (isSenderAuth) return true
-        }
+        if (sender.isNullOrEmpty()) return true
+        val s = sender.uppercase().replace("-", "").replace("_", "")
+        val isSenderAuth = s.contains("TMBANK") ||
+                s.contains("TMB") ||
+                s.contains("PAYTM") ||
+                s.contains("PHONEPE") ||
+                s.contains("GPAY") ||
+                s.contains("CRED") ||
+                s.contains("BHARATPE") ||
+                s.contains("HDFC") ||
+                s.contains("ICICI") ||
+                s.contains("SBI") ||
+                s.contains("AXIS") ||
+                s.contains("KOTAK") ||
+                s.contains("BOB") ||
+                s.contains("CANARA") ||
+                s.contains("PNB") ||
+                s.contains("UNION") ||
+                s.contains("FDRL") ||
+                s.contains("FEDERAL") ||
+                s.contains("IDFC") ||
+                s.contains("INDUS") ||
+                s.contains("RBL") ||
+                s.contains("YES") ||
+                s.contains("BANK") ||
+                s.contains("ALERTS") ||
+                s.contains("ALERT") ||
+                s.contains("TXN") ||
+                s.contains("NOTIFICATION")
+        if (isSenderAuth) return true
 
         if (!rawText.isNullOrEmpty()) {
             val upper = rawText.uppercase()
-            if (upper.contains("TMB") || upper.contains("TMBANK") || upper.contains("TAMILNAD MERCANTILE BANK") || upper.contains("PAYTM") || upper.contains("PHONEPE") || upper.contains("GPAY") || upper.contains("BHARATPE")) {
-                return true
+            if (upper.contains("RS.") || upper.contains("INR") || upper.contains("RS ") || upper.contains("₹")) {
+                if (upper.contains("DEBITED") || upper.contains("CREDITED") || upper.contains("PAID") || upper.contains("SENT") || upper.contains("RECEIVED") || upper.contains("TRANSFERRED") || upper.contains("A/C") || upper.contains("ACCOUNT") || upper.contains("VPA") || upper.contains("UPI") || upper.contains("IMPS") || upper.contains("NEFT")) {
+                    return true
+                }
             }
         }
         return false
     }
 
-    // Date & Time extraction patterns from bank SMS (e.g. "on 04-08-2026 07:50 PM", "on 14-08-2026 11:24 AM", "on 10-08-26 16:32", "on 12-08-2026 15:44:09")
+    // Date & Time extraction patterns from bank SMS
     private val DATE_PATTERNS = listOf(
-        Pair(Pattern.compile("on\\s+([0-9]{2}-[0-9]{2}-[0-9]{4}\\s+[0-9]{1,2}:[0-9]{2}\\s+(?:AM|PM))", Pattern.CASE_INSENSITIVE), "dd-MM-yyyy hh:mm a"),
         Pair(Pattern.compile("on\\s+([0-9]{2}-[0-9]{2}-[0-9]{4}\\s+[0-9]{1,2}:[0-9]{2}:[0-9]{2})", Pattern.CASE_INSENSITIVE), "dd-MM-yyyy HH:mm:ss"),
+        Pair(Pattern.compile("on\\s+([0-9]{2}-[0-9]{2}-[0-9]{4}\\s+[0-9]{1,2}:[0-9]{2}\\s+(?:AM|PM))", Pattern.CASE_INSENSITIVE), "dd-MM-yyyy hh:mm a"),
         Pair(Pattern.compile("on\\s+([0-9]{2}-[0-9]{2}-[0-9]{4}\\s+[0-9]{1,2}:[0-9]{2})", Pattern.CASE_INSENSITIVE), "dd-MM-yyyy HH:mm"),
         Pair(Pattern.compile("on\\s+([0-9]{2}-[0-9]{2}-[0-9]{2}\\s+[0-9]{1,2}:[0-9]{2})", Pattern.CASE_INSENSITIVE), "dd-MM-yy HH:mm"),
         Pair(Pattern.compile("as\\s+on\\s+([0-9]{2}-[0-9]{2}-[0-9]{4}\\s+[0-9]{1,2}:[0-9]{2})", Pattern.CASE_INSENSITIVE), "dd-MM-yyyy HH:mm"),
@@ -77,7 +91,7 @@ object TransactionParser {
                             return parsed.time
                         }
                     } catch (e: Exception) {
-                        // ignore and try next
+                        // try next
                     }
                 }
             }
@@ -85,40 +99,40 @@ object TransactionParser {
         return fallbackTimestamp
     }
 
-    // Regex patterns for Account Number (e.g. XXXX5779, XXXXX5779, SB 305779, SB305779, 305779)
+    // Account Patterns (e.g. XXXX5779, SB 305779, SB305779, 305779)
     private val ACCOUNT_PATTERNS = listOf(
         Pattern.compile("(?:your\\s+)?(?:a/c|acc(?:ount)?|sb)\\s*(?:no\\.?)?\\s*[:\\-]?\\s*([a-zA-Z0-9*X]+)", Pattern.CASE_INSENSITIVE),
         Pattern.compile("sb\\s*([0-9]{4,10})", Pattern.CASE_INSENSITIVE),
         Pattern.compile("a/c\\s*([xX0-9]+)", Pattern.CASE_INSENSITIVE)
     )
 
-    // Regex pattern for Available Balance in notifications (e.g. "Current AVBL bal is Rs.991.75", "Clr Bal Rs.19,150.35", "Avbl Bal Rs.40358.35")
+    // Balance Patterns (e.g. "Current AVBL bal is Rs.991.75", "Avbl Bal Rs.40358.35", "Clr Bal Rs.19,150.35")
     private val BALANCE_PATTERNS = listOf(
-        Pattern.compile("(?:current\\s+)?(?:avbl|avail(?:able)?|clr)\\s*bal(?:ance)?\\s*(?:is|:|-)?\\s*(?:rs\\.?|inr|ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¹)?\\s*([0-9,]+(?:\\.[0-9]{1,2})?)", Pattern.CASE_INSENSITIVE),
-        Pattern.compile("(?:bal(?:ance)?)\\s*(?:is|:|-)?\\s*(?:rs\\.?|inr|ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¹)?\\s*([0-9,]+(?:\\.[0-9]{1,2})?)", Pattern.CASE_INSENSITIVE)
+        Pattern.compile("(?:current\\s+)?(?:avbl|avail(?:able)?|clr)\\s*bal(?:ance)?\\s*(?:is|:|-)?\\s*(?:rs\\.?|inr|₹)?\\s*([0-9,]+(?:\\.[0-9]{1,2})?)", Pattern.CASE_INSENSITIVE),
+        Pattern.compile("(?:bal(?:ance)?)\\s*(?:is|:|-)?\\s*(?:rs\\.?|inr|₹)?\\s*([0-9,]+(?:\\.[0-9]{1,2})?)", Pattern.CASE_INSENSITIVE)
     )
 
-    // Specific transaction amount patterns (e.g. "debited with Rs.50,000.00", "credited Rs.18,419.60", "Paid ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¹85")
+    // Amount Patterns
     private val TXN_AMOUNT_PATTERNS = listOf(
         Pattern.compile("(?:debited\\s+with|credited\\s+with|debited\\s+by|credited\\s+by|credited\\s+for|credited|debited|paid|spent|sent|received|transferred|transfer|transaction|payment|deposit|deposited|added|cashback|refund)\\s+(?:by|with|of|for)?\\s*(?:rs\\.?|inr|₹)?\\s*([0-9,]+(?:\\.[0-9]{1,2})?)", Pattern.CASE_INSENSITIVE),
         Pattern.compile("(?:rs\\.?|inr|₹)\\s*([0-9,]+(?:\\.[0-9]{1,2})?)", Pattern.CASE_INSENSITIVE),
         Pattern.compile("([0-9,]+(?:\\.[0-9]{1,2})?)\\s*(?:rs\\.?|inr|₹)", Pattern.CASE_INSENSITIVE)
     )
 
-    // Linked VPA pattern (e.g. "linked to paytmqr5dbhs9@ptys", "linked to raisesmartlearnsolut.69514104@hdfcbank", "linked to bharatpe.9g0kOu7l3i381424@fbpe")
+    // Linked VPA pattern
     private val LINKED_VPA_PATTERN = Pattern.compile("linked\\s+to\\s+([a-zA-Z0-9.\\-_@]+)", Pattern.CASE_INSENSITIVE)
 
-    // NEFT / IMPS sender pattern (e.g. "Info: NEFT-ICIC0000035-KARUPPASAMY PANDIYAN-IN72622238446542", "by KARUPPASAMY PANDIYAN from FDRL bank")
+    // NEFT / IMPS sender pattern (e.g. "by KARUPPASAMY PANDIYAN from FDRL bank")
     private val NEFT_INFO_PATTERN = Pattern.compile("info:\\s*neft-[a-z0-9]+-([a-z\\s]+)-", Pattern.CASE_INSENSITIVE)
-    private val BY_SENDER_PATTERN = Pattern.compile("by\\s+([a-z\\s]{3,35}?)\\s+from", Pattern.CASE_INSENSITIVE)
+    private val BY_SENDER_PATTERN = Pattern.compile("by\\s+([a-zA-Z\\s]{3,35}?)\\s+from", Pattern.CASE_INSENSITIVE)
 
     // Merchant / Payee extraction patterns
     private val TO_MERCHANT_PATTERN = Pattern.compile(
-        "(?:paid\\s+to|sent\\s+to|paid\\s+(?:rs\\.?|inr|ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¹)?[0-9,.]+\\s+to|to|at|vpa)\\s+([a-zA-Z0-9&'\\-][a-zA-Z0-9&'\\-\\s]{1,45}?)(?=[\\,\\;\\.]|\\s+(?:on|ref|txn|via|a/c|bal|avail|info|for)|$)",
+        "(?:paid\\s+to|sent\\s+to|paid\\s+(?:rs\\.?|inr|₹)?[0-9,.]+\\s+to|to|at|vpa)\\s+([a-zA-Z0-9&'\\-][a-zA-Z0-9&'\\-\\s]{1,45}?)(?=[\\,\\;\\.]|\\s+(?:on|ref|txn|via|a/c|bal|avail|info|for)|$)",
         Pattern.CASE_INSENSITIVE
     )
 
-    // Ref / Txn ID patterns (e.g. "UPI Ref No.000000386901", "RefNo: 622415299744", "Ref: 321456987012")
+    // Ref / Txn ID patterns
     private val REF_PATTERNS = listOf(
         Pattern.compile("(?:upi\\s+ref|ref\\s*no|refno|ref(?:erence)?)\\s*(?:no\\.?)?\\s*[:\\-]?\\s*([a-zA-Z0-9]+)", Pattern.CASE_INSENSITIVE),
         Pattern.compile("(?:txn\\s*id|rrn)\\s*[:\\-]?\\s*([a-zA-Z0-9]+)", Pattern.CASE_INSENSITIVE)
@@ -127,22 +141,21 @@ object TransactionParser {
     private val BANKS = listOf("TMB", "TMBANK", "HDFC", "ICICI", "SBI", "AXIS", "KOTAK", "PNB", "BOB", "YESB", "FDRL", "FEDERAL", "PAYTM", "PHONEPE", "GPAY", "CRED", "BHARATPE")
 
     fun parse(rawText: String, sender: String? = null, fallbackTimestamp: Long = System.currentTimeMillis()): ParsedTransaction? {
-        // Strict sender filtering: If sender is provided and not authorized, reject
         if (!isAuthorizedSender(sender, rawText)) {
             return null
         }
 
         val lowerText = rawText.lowercase()
 
-        // 1. Privacy filter: Ignore OTP / PIN / Auth messages
+        // 1. Privacy filter
         for (kw in SENSITIVE_KEYWORDS) {
             if (lowerText.contains(kw)) {
                 return null
             }
         }
 
-        // 2. Reject Spam / Loan / Promo templates
-        if (lowerText.contains("pre-approved") || lowerText.contains("loan") || lowerText.contains("bonus points") || lowerText.contains("claim reward")) {
+        // 2. Reject Spam / Loan
+        if (lowerText.contains("pre-approved") || lowerText.contains("bonus points") || lowerText.contains("claim reward")) {
             if (!lowerText.contains("credited") && !lowerText.contains("debited")) {
                 return null
             }
@@ -159,7 +172,7 @@ object TransactionParser {
             }
         }
 
-        // 4. Extract Account Number (e.g. XXXX5779, SB 305779, 305779)
+        // 4. Extract Account Number
         var accNo: String? = null
         for (p in ACCOUNT_PATTERNS) {
             val m = p.matcher(rawText)
@@ -172,40 +185,34 @@ object TransactionParser {
             }
         }
 
-        // 5. Determine Debit (Expense) vs Credit (Income) with comprehensive bank expressions
-        val hasCreditIndicator = lowerText.contains("credited") ||
-                lowerText.contains("received") ||
-                lowerText.contains("deposit") ||
+        // 5. Determine Debit (Expense) vs Credit (Income) with strict user-account context
+        // Check if USER's account was credited or debited
+        val isUserAccountDebited = lowerText.contains("your a/c") && lowerText.contains("is debited") ||
+                lowerText.contains("ur sb") && lowerText.contains("is debited") ||
+                lowerText.contains("a/c no.") && lowerText.contains("is debited") ||
+                lowerText.contains("is debited with") ||
+                lowerText.contains("debited from") ||
+                lowerText.contains("debited by")
+
+        val isUserAccountCredited = lowerText.contains("your a/c") && lowerText.contains("is credited") ||
+                lowerText.contains("ur sb") && lowerText.contains("is credited") ||
+                lowerText.contains("a/c no.") && lowerText.contains("is credited") ||
+                lowerText.contains("is credited with") ||
+                lowerText.contains("credited rs") ||
+                lowerText.contains("credited by") ||
+                lowerText.contains("credited for") ||
+                lowerText.contains("received rs") ||
+                lowerText.contains("money received") ||
+                lowerText.contains("you received") ||
                 lowerText.contains("deposited") ||
                 lowerText.contains("cashback") ||
-                lowerText.contains("refund") ||
-                lowerText.contains("added to") ||
-                lowerText.contains("cr to") ||
-                lowerText.contains("cr.") ||
-                lowerText.contains("inward") ||
-                lowerText.contains("salary") ||
-                lowerText.contains("interest credited")
-
-        val hasDebitIndicator = lowerText.contains("debited") ||
-                lowerText.contains("paid") ||
-                lowerText.contains("spent") ||
-                lowerText.contains("sent") ||
-                lowerText.contains("withdrawn") ||
-                lowerText.contains("purchase") ||
-                lowerText.contains("dr to") ||
-                lowerText.contains("dr.")
-
-        if (!hasDebitIndicator && !hasCreditIndicator && !lowerText.contains("transaction") && !lowerText.contains("upi")) {
-            return null
-        }
+                lowerText.contains("refund")
 
         val isIncome = when {
-            lowerText.contains("is credited with") || lowerText.contains("is credited") || lowerText.contains("credited by") || lowerText.contains("credited rs") || lowerText.contains("credited for") || lowerText.contains("credited to") || lowerText.contains("has been credited") -> true
-            lowerText.contains("received rs") || lowerText.contains("money received") || lowerText.contains("you received") || lowerText.contains("deposited") || lowerText.contains("cashback") || lowerText.contains("refund") -> true
-            lowerText.contains("is debited with") || lowerText.contains("is debited") || lowerText.contains("debited from") || lowerText.contains("debited by") || lowerText.contains("debited rs") || lowerText.contains("debited for") -> false
-            hasCreditIndicator && !hasDebitIndicator -> true
-            hasDebitIndicator && !hasCreditIndicator -> false
-            hasCreditIndicator -> true
+            isUserAccountDebited -> false
+            isUserAccountCredited -> true
+            lowerText.contains("debited") -> false
+            lowerText.contains("credited") -> true
             else -> false
         }
 
@@ -228,12 +235,14 @@ object TransactionParser {
             if (amount != null) break
         }
 
-        if (amount == null) return null
+        if (amount == null || amount <= 0.0 || amount.isNaN() || amount.isInfinite()) {
+            return null
+        }
 
         // 7. Extract Merchant / Beneficiary / Sender
         var merchant: String? = null
 
-        // Check NEFT Info pattern (e.g. Info: NEFT-ICIC0000035-KARUPPASAMY PANDIYAN-...)
+        // Check NEFT Info pattern (e.g. Info: NEFT-ICIC0000035-KARUPPASAMY PANDIYAN-IN72622238446542)
         val neftMatcher = NEFT_INFO_PATTERN.matcher(rawText)
         if (neftMatcher.find()) {
             merchant = neftMatcher.group(1)?.trim()?.uppercase()
@@ -303,12 +312,8 @@ object TransactionParser {
             }
         }
 
-        // 11. Extract Real Transaction Timestamp from SMS Text (fallback to SMS arrival time)
+        // 11. Extract Real Transaction Timestamp from SMS Text
         val transactionTimestamp = extractTimestamp(rawText, fallbackTimestamp)
-
-        if (amount <= 0.0 || amount.isNaN() || amount.isInfinite()) {
-            return null
-        }
 
         return ParsedTransaction(
             amount = amount,
@@ -366,12 +371,9 @@ object TransactionParser {
             .split(Regex("\\s+"))
             .take(6)
             .joinToString(" ")
-            .uppercase()
     }
 
-    private fun sanitizeRawText(text: String): String {
-        return text.replace(Regex("\\b\\d{10,16}\\b"), "[REDACTED]")
+    private fun sanitizeRawText(rawText: String): String {
+        return rawText.replace(Regex("(?i)\\b(\\d{4,8})\\b"), "****")
     }
-
-    private fun abs(d: Double): Double = if (d < 0) -d else d
 }
