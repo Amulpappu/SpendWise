@@ -25,13 +25,13 @@ import java.util.*
 fun TransactionItem(
     transaction: TransactionEntity,
     categoryEmoji: String = "🏷️",
-    currencySymbol: String = "₹",
+    currencySymbol: String = "\u20B9",
     onClick: (TransactionEntity) -> Unit = {},
     onEdit: (TransactionEntity) -> Unit = {},
     onDelete: (TransactionEntity) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    val cleanCurrency = if (currencySymbol.contains("Ã") || currencySymbol.contains("") || currencySymbol.isBlank()) "₹" else currencySymbol
+    val cleanCurrency = if (currencySymbol.contains("Ã") || currencySymbol.contains("") || currencySymbol.isBlank()) "\u20B9" else currencySymbol
     val dateFormat = remember { SimpleDateFormat("dd MMM, hh:mm a", Locale.getDefault()) }
     val dateStr = remember(transaction.timestamp) { dateFormat.format(Date(transaction.timestamp)) }
     val isIncome = transaction.isIncome

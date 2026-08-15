@@ -396,7 +396,7 @@ fun TransactionsScreen(
         TransactionDetailDialog(
             transaction = currentTxn,
             categoryEmoji = emoji,
-            currencySymbol = "Ã¢â€šÂ¹",
+            currencySymbol = "\u20B9",
             onDismiss = { selectedTxnForDetails = null },
             onEdit = {
                 val t = it

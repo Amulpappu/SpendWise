@@ -38,7 +38,7 @@ fun ReportsScreen(viewModel: MainViewModel) {
     val latestBalance by viewModel.latestBankBalance.collectAsState()
     val latestAccountNum by viewModel.latestAccountNumber.collectAsState()
 
-    val currency = "₹"
+    val currency = "\u20B9"
     val netSavings = totalIncome - totalExpense
 
     val highestCategoryEntry = categoryMap.maxByOrNull { it.value }

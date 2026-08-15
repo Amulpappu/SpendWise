@@ -59,7 +59,7 @@ object TransactionParser {
 
         if (!rawText.isNullOrEmpty()) {
             val upper = rawText.uppercase()
-            if (upper.contains("RS.") || upper.contains("INR") || upper.contains("RS ") || upper.contains("₹")) {
+            if (upper.contains("RS.") || upper.contains("INR") || upper.contains("RS ") || upper.contains("\u20B9")) {
                 if (upper.contains("DEBITED") || upper.contains("CREDITED") || upper.contains("PAID") || upper.contains("SENT") || upper.contains("RECEIVED") || upper.contains("TRANSFERRED") || upper.contains("A/C") || upper.contains("ACCOUNT") || upper.contains("VPA") || upper.contains("UPI") || upper.contains("IMPS") || upper.contains("NEFT")) {
                     return true
                 }
@@ -108,15 +108,15 @@ object TransactionParser {
 
     // Balance Patterns (e.g. "Current AVBL bal is Rs.991.75", "Avbl Bal Rs.40358.35", "Clr Bal Rs.19,150.35")
     private val BALANCE_PATTERNS = listOf(
-        Pattern.compile("(?:current\\s+)?(?:avbl|avail(?:able)?|clr)\\s*bal(?:ance)?\\s*(?:is|:|-)?\\s*(?:rs\\.?|inr|₹)?\\s*([0-9,]+(?:\\.[0-9]{1,2})?)", Pattern.CASE_INSENSITIVE),
-        Pattern.compile("(?:bal(?:ance)?)\\s*(?:is|:|-)?\\s*(?:rs\\.?|inr|₹)?\\s*([0-9,]+(?:\\.[0-9]{1,2})?)", Pattern.CASE_INSENSITIVE)
+        Pattern.compile("(?:current\\s+)?(?:avbl|avail(?:able)?|clr)\\s*bal(?:ance)?\\s*(?:is|:|-)?\\s*(?:rs\\.?|inr|\u20B9)?\\s*([0-9,]+(?:\\.[0-9]{1,2})?)", Pattern.CASE_INSENSITIVE),
+        Pattern.compile("(?:bal(?:ance)?)\\s*(?:is|:|-)?\\s*(?:rs\\.?|inr|\u20B9)?\\s*([0-9,]+(?:\\.[0-9]{1,2})?)", Pattern.CASE_INSENSITIVE)
     )
 
     // Amount Patterns
     private val TXN_AMOUNT_PATTERNS = listOf(
-        Pattern.compile("(?:debited\\s+with|credited\\s+with|debited\\s+by|credited\\s+by|credited\\s+for|credited|debited|paid|spent|sent|received|transferred|transfer|transaction|payment|deposit|deposited|added|cashback|refund)\\s+(?:by|with|of|for)?\\s*(?:rs\\.?|inr|₹)?\\s*([0-9,]+(?:\\.[0-9]{1,2})?)", Pattern.CASE_INSENSITIVE),
-        Pattern.compile("(?:rs\\.?|inr|₹)\\s*([0-9,]+(?:\\.[0-9]{1,2})?)", Pattern.CASE_INSENSITIVE),
-        Pattern.compile("([0-9,]+(?:\\.[0-9]{1,2})?)\\s*(?:rs\\.?|inr|₹)", Pattern.CASE_INSENSITIVE)
+        Pattern.compile("(?:debited\\s+with|credited\\s+with|debited\\s+by|credited\\s+by|credited\\s+for|credited|debited|paid|spent|sent|received|transferred|transfer|transaction|payment|deposit|deposited|added|cashback|refund)\\s+(?:by|with|of|for)?\\s*(?:rs\\.?|inr|\u20B9)?\\s*([0-9,]+(?:\\.[0-9]{1,2})?)", Pattern.CASE_INSENSITIVE),
+        Pattern.compile("(?:rs\\.?|inr|\u20B9)\\s*([0-9,]+(?:\\.[0-9]{1,2})?)", Pattern.CASE_INSENSITIVE),
+        Pattern.compile("([0-9,]+(?:\\.[0-9]{1,2})?)\\s*(?:rs\\.?|inr|\u20B9)", Pattern.CASE_INSENSITIVE)
     )
 
     // Linked VPA pattern
@@ -128,7 +128,7 @@ object TransactionParser {
 
     // Merchant / Payee extraction patterns
     private val TO_MERCHANT_PATTERN = Pattern.compile(
-        "(?:paid\\s+to|sent\\s+to|paid\\s+(?:rs\\.?|inr|₹)?[0-9,.]+\\s+to|to|at|vpa)\\s+([a-zA-Z0-9&'\\-][a-zA-Z0-9&'\\-\\s]{1,45}?)(?=[\\,\\;\\.]|\\s+(?:on|ref|txn|via|a/c|bal|avail|info|for)|$)",
+        "(?:paid\\s+to|sent\\s+to|paid\\s+(?:rs\\.?|inr|\u20B9)?[0-9,.]+\\s+to|to|at|vpa)\\s+([a-zA-Z0-9&'\\-][a-zA-Z0-9&'\\-\\s]{1,45}?)(?=[\\,\\;\\.]|\\s+(?:on|ref|txn|via|a/c|bal|avail|info|for)|$)",
         Pattern.CASE_INSENSITIVE
     )
 

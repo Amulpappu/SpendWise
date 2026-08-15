@@ -35,9 +35,9 @@ object BudgetAlertManager {
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         val title = if (isIncome) "💰 Money Received" else "💳 Expense Recorded"
         val text = if (isIncome) {
-            "₹${amount.toInt()} received from $merchant ($category)"
+            "\u20B9${amount.toInt()} received from $merchant ($category)"
         } else {
-            "₹${amount.toInt()} spent on $category at $merchant"
+            "\u20B9${amount.toInt()} spent on $category at $merchant"
         }
 
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)

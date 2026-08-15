@@ -122,7 +122,7 @@ class ExpenseRepositoryImpl(
         budgetDao.getMonthlyBudgetFlow(monthKey)
 
     override suspend fun setMonthlyBudget(monthKey: String, amount: Double) {
-        budgetDao.setMonthlyBudget(BudgetEntity(monthKey = monthKey, totalBudget = amount, currencySymbol = "₹"))
+        budgetDao.setMonthlyBudget(BudgetEntity(monthKey = monthKey, totalBudget = amount, currencySymbol = "\u20B9"))
     }
 
     override fun getCategoryBudgetsFlow(monthKey: String): Flow<List<CategoryBudgetEntity>> =

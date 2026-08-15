@@ -102,7 +102,7 @@ fun MetricCard(
 @Composable
 fun CategoryPieChart(
     categoryData: Map<String, Double>,
-    currencySymbol: String = "â‚¹",
+    currencySymbol: String = "\u20B9",
     modifier: Modifier = Modifier
 ) {
     val total = categoryData.values.sum()

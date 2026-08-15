@@ -75,7 +75,7 @@ fun DashboardScreen(
     var txnToEdit by remember { mutableStateOf<TransactionEntity?>(null) }
 
     val budget = budgetEntity?.totalBudget ?: 0.0
-    val currency = "Ã¢â€šÂ¹"
+    val currency = "\u20B9"
     val netBalance = totalIncome - totalExpense
     val usedPct = if (budget > 0) ((totalExpense / budget) * 100).toInt().coerceIn(0, 100) else 0
 
@@ -243,14 +243,14 @@ fun DashboardScreen(
                     // Service 2: Google Sheets Live Sync
                     QuickServiceTile(
                         icon = if (isSyncingSheet) Icons.Default.HourglassTop else Icons.Default.CloudSync,
-                        label = if (isSyncingSheet) "Syncing..." else "Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢",
+                        label = if (isSyncingSheet) "Syncing..." else "Sheet Sync",
                         color = PrimaryEmerald,
                         onClick = {
                             coroutineScope.launch {
                                 isSyncingSheet = true
                                 val synced = com.example.smartexpensetracker.data.export.GoogleSheetsSyncManager.syncAllTransactionsToSheet(context, allTransactions)
                                 isSyncingSheet = false
-                                Toast.makeText(context, "ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¦ Synced $synced historical transactions to Google Sheet!", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, "Synced $synced historical transactions to Google Sheet!", Toast.LENGTH_SHORT).show()
                             }
                         }
                     )
@@ -371,7 +371,7 @@ fun DashboardScreen(
                         Text(
                             text = if (showBalance) {
                                 if (latestBankBal != null) "$currency${String.format(Locale.US, "%,.2f", latestBankBal)}" else "$currency${String.format(Locale.US, "%,.2f", (353.35).coerceAtLeast(netBalance))}"
-                            } else "â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢",
+                            } else "\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022",
                             style = MaterialTheme.typography.headlineLarge.copy(fontSize = 32.sp, fontWeight = FontWeight.Black),
                             color = PrimaryEmeraldLight
                         )
@@ -499,7 +499,7 @@ fun DashboardScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = if (searchQuery.isNotBlank()) "Search Results (${filteredTransactions.size})" else "Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢",
+                    text = if (searchQuery.isNotBlank()) "Search Results (${filteredTransactions.size})" else "\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022",
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
                 )
 
@@ -546,7 +546,7 @@ fun DashboardScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = if (searchQuery.isNotBlank()) "No transaction matching \"$searchQuery\"" else "Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢",
+                            text = if (searchQuery.isNotBlank()) "No transaction matching \"$searchQuery\"" else "\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                         )

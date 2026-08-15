@@ -46,7 +46,7 @@ class AppDatabase private constructor(context: Context) : SQLiteOpenHelper(conte
             db.execSQL("ALTER TABLE transactions ADD COLUMN accountBalance REAL")
         } catch (e: Exception) {}
         try {
-            db.execSQL("UPDATE monthly_budget SET currencySymbol = 'â‚¹'")
+            db.execSQL("UPDATE monthly_budget SET currencySymbol = '\u20B9'")
         } catch (e: Exception) {}
     }
 
@@ -324,7 +324,7 @@ class AppDatabase private constructor(context: Context) : SQLiteOpenHelper(conte
                     return BudgetEntity(
                         monthKey = cursor.getString(cursor.getColumnIndexOrThrow("monthKey")),
                         totalBudget = cursor.getDouble(cursor.getColumnIndexOrThrow("totalBudget")),
-                        currencySymbol = "â‚¹",
+                        currencySymbol = "\u20B9",
                         warn75Sent = cursor.getInt(cursor.getColumnIndexOrThrow("warn75Sent")) == 1,
                         warn90Sent = cursor.getInt(cursor.getColumnIndexOrThrow("warn90Sent")) == 1,
                         warn100Sent = cursor.getInt(cursor.getColumnIndexOrThrow("warn100Sent")) == 1
@@ -338,14 +338,14 @@ class AppDatabase private constructor(context: Context) : SQLiteOpenHelper(conte
             val cv = ContentValues().apply {
                 put("monthKey", budget.monthKey)
                 put("totalBudget", budget.totalBudget)
-                put("currencySymbol", "â‚¹")
+                put("currencySymbol", "\u20B9")
                 put("warn75Sent", if (budget.warn75Sent) 1 else 0)
                 put("warn90Sent", if (budget.warn90Sent) 1 else 0)
                 put("warn100Sent", if (budget.warn100Sent) 1 else 0)
             }
             val db = writableDatabase
             db.insertWithOnConflict("monthly_budget", null, cv, SQLiteDatabase.CONFLICT_REPLACE)
-            _monthlyBudgetsMap[budget.monthKey]?.value = budget.copy(currencySymbol = "â‚¹")
+            _monthlyBudgetsMap[budget.monthKey]?.value = budget.copy(currencySymbol = "\u20B9")
         }
 
         override fun getCategoryBudgetsFlow(monthKey: String): Flow<List<CategoryBudgetEntity>> {

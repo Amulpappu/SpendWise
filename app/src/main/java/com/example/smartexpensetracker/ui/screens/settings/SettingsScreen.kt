@@ -452,7 +452,7 @@ fun SettingsScreen(
   var sheet = ss.getSheetByName(sheetName);
   if (!sheet) {
     sheet = ss.insertSheet(sheetName);
-    sheet.appendRow(["ID", "Date & Time", "Type", "Amount (₹)", "Category", "Merchant / Payee", "Bank / Account", "Payment Method", "Note"]);
+    sheet.appendRow(["ID", "Date & Time", "Type", "Amount (\u20B9)", "Category", "Merchant / Payee", "Bank / Account", "Payment Method", "Note"]);
     sheet.getRange("A1:I1").setBackground("#0F2027").setFontColor("#FFFFFF").setFontWeight("bold");
     sheet.setFrozenRows(1);
   }

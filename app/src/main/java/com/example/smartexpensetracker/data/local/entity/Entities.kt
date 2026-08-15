@@ -9,7 +9,7 @@ data class CategoryEntity(
 data class BudgetEntity(
     val monthKey: String, // Format: YYYY-MM e.g. "2026-08"
     val totalBudget: Double,
-    val currencySymbol: String = "₹",
+    val currencySymbol: String = "\u20B9",
     val warn75Sent: Boolean = false,
     val warn90Sent: Boolean = false,
     val warn100Sent: Boolean = false

@@ -195,7 +195,7 @@ object BankStatementGenerator {
                 textPaint.color = Color.parseColor("#2C5282")
                 textPaint.textSize = 15f
                 textPaint.isFakeBoldText = true
-                canvas.drawText("₹${String.format(Locale.getDefault(), "%,.2f", info.closingBalance)}", 395f, y + 48f, textPaint)
+                canvas.drawText("\u20B9${String.format(Locale.getDefault(), "%,.2f", info.closingBalance)}", 395f, y + 48f, textPaint)
 
                 // --- FINANCIAL KPI SUMMARY ---
                 y += 90f
@@ -209,7 +209,7 @@ object BankStatementGenerator {
                 textPaint.isFakeBoldText = true
                 canvas.drawText("TOTAL CREDITED (INCOME)", 32f, y + 15f, textPaint)
                 textPaint.textSize = 12f
-                canvas.drawText("+₹${String.format(Locale.getDefault(), "%,.2f", totalIncome)}", 32f, y + 32f, textPaint)
+                canvas.drawText("+\u20B9${String.format(Locale.getDefault(), "%,.2f", totalIncome)}", 32f, y + 32f, textPaint)
 
                 // Total Expense (Dr)
                 val kpi2X = 24f + kpiBoxWidth + 8f
@@ -220,7 +220,7 @@ object BankStatementGenerator {
                 textPaint.isFakeBoldText = true
                 canvas.drawText("TOTAL DEBITED (EXPENSES)", kpi2X + 8f, y + 15f, textPaint)
                 textPaint.textSize = 12f
-                canvas.drawText("-₹${String.format(Locale.getDefault(), "%,.2f", totalExpense)}", kpi2X + 8f, y + 32f, textPaint)
+                canvas.drawText("-\u20B9${String.format(Locale.getDefault(), "%,.2f", totalExpense)}", kpi2X + 8f, y + 32f, textPaint)
 
                 // Net Flow
                 val kpi3X = kpi2X + kpiBoxWidth + 8f
@@ -233,7 +233,7 @@ object BankStatementGenerator {
                 canvas.drawText("NET SAVINGS / FLOW", kpi3X + 8f, y + 15f, textPaint)
                 textPaint.textSize = 12f
                 textPaint.color = if (netFlow >= 0) Color.parseColor("#276749") else Color.parseColor("#9B2C2C")
-                canvas.drawText("${if (netFlow >= 0) "+" else ""}₹${String.format(Locale.getDefault(), "%,.2f", netFlow)}", kpi3X + 8f, y + 32f, textPaint)
+                canvas.drawText("${if (netFlow >= 0) "+" else ""}\u20B9${String.format(Locale.getDefault(), "%,.2f", netFlow)}", kpi3X + 8f, y + 32f, textPaint)
 
                 // --- TRANSACTION TABLE HEADER ---
                 y += 54f
@@ -302,7 +302,7 @@ object BankStatementGenerator {
                         textPaint.color = Color.parseColor("#E53E3E")
                         textPaint.textSize = 8f
                         textPaint.isFakeBoldText = true
-                        canvas.drawText("₹${String.format(Locale.getDefault(), "%,.2f", txn.amount)}", 350f, y + 14f, textPaint)
+                        canvas.drawText("\u20B9${String.format(Locale.getDefault(), "%,.2f", txn.amount)}", 350f, y + 14f, textPaint)
                         textPaint.color = Color.parseColor("#A0AEC0")
                         textPaint.textSize = 8f
                         textPaint.isFakeBoldText = false
@@ -315,14 +315,14 @@ object BankStatementGenerator {
                         textPaint.color = Color.parseColor("#38A169")
                         textPaint.textSize = 8f
                         textPaint.isFakeBoldText = true
-                        canvas.drawText("₹${String.format(Locale.getDefault(), "%,.2f", txn.amount)}", 430f, y + 14f, textPaint)
+                        canvas.drawText("\u20B9${String.format(Locale.getDefault(), "%,.2f", txn.amount)}", 430f, y + 14f, textPaint)
                     }
 
                     // Balance
                     textPaint.color = Color.parseColor("#2D3748")
                     textPaint.textSize = 7.5f
                     textPaint.isFakeBoldText = true
-                    val balStr = txn.accountBalance?.let { "₹${String.format(Locale.getDefault(), "%,.2f", it)}" } ?: "-"
+                    val balStr = txn.accountBalance?.let { "\u20B9${String.format(Locale.getDefault(), "%,.2f", it)}" } ?: "-"
                     canvas.drawText(balStr, 510f, y + 14f, textPaint)
 
                     y += 22f
@@ -401,7 +401,7 @@ object BankStatementGenerator {
                         textPaint.color = Color.parseColor("#E53E3E")
                         textPaint.textSize = 8f
                         textPaint.isFakeBoldText = true
-                        canvas.drawText("₹${String.format(Locale.getDefault(), "%,.2f", txn.amount)}", 350f, y + 14f, textPaint)
+                        canvas.drawText("\u20B9${String.format(Locale.getDefault(), "%,.2f", txn.amount)}", 350f, y + 14f, textPaint)
                         textPaint.color = Color.parseColor("#A0AEC0")
                         textPaint.textSize = 8f
                         textPaint.isFakeBoldText = false
@@ -414,13 +414,13 @@ object BankStatementGenerator {
                         textPaint.color = Color.parseColor("#38A169")
                         textPaint.textSize = 8f
                         textPaint.isFakeBoldText = true
-                        canvas.drawText("₹${String.format(Locale.getDefault(), "%,.2f", txn.amount)}", 430f, y + 14f, textPaint)
+                        canvas.drawText("\u20B9${String.format(Locale.getDefault(), "%,.2f", txn.amount)}", 430f, y + 14f, textPaint)
                     }
 
                     textPaint.color = Color.parseColor("#2D3748")
                     textPaint.textSize = 7.5f
                     textPaint.isFakeBoldText = true
-                    val balStr = txn.accountBalance?.let { "₹${String.format(Locale.getDefault(), "%,.2f", it)}" } ?: "-"
+                    val balStr = txn.accountBalance?.let { "\u20B9${String.format(Locale.getDefault(), "%,.2f", it)}" } ?: "-"
                     canvas.drawText(balStr, 510f, y + 14f, textPaint)
 
                     y += 22f
@@ -478,12 +478,12 @@ object BankStatementGenerator {
         sb.append("Account Number:,\"${info.accountNumber}\"\n")
         sb.append("Registered Mobile:,\"${info.mobileNumber}\"\n")
         sb.append("Statement Period:,\"${info.periodText}\"\n")
-        sb.append("Closing Balance:,\"₹${String.format(Locale.getDefault(), "%,.2f", info.closingBalance)}\"\n")
-        sb.append("Total Credited (Income):,\"₹${String.format(Locale.getDefault(), "%,.2f", totalIncome)}\"\n")
-        sb.append("Total Debited (Expenses):,\"₹${String.format(Locale.getDefault(), "%,.2f", totalExpense)}\"\n")
+        sb.append("Closing Balance:,\"\u20B9${String.format(Locale.getDefault(), "%,.2f", info.closingBalance)}\"\n")
+        sb.append("Total Credited (Income):,\"\u20B9${String.format(Locale.getDefault(), "%,.2f", totalIncome)}\"\n")
+        sb.append("Total Debited (Expenses):,\"\u20B9${String.format(Locale.getDefault(), "%,.2f", totalExpense)}\"\n")
         sb.append("Password Protected Note:,\"First 4 letters of name + last 4 digits of phone (${getPasswordHint(info.customerName, info.mobileNumber)})\"\n\n")
 
-        sb.append("Date & Time,Narration / Payee,Payment Mode,Reference / UPI Number,Category,Withdrawal (Dr ₹),Deposit (Cr ₹),Running Balance (₹),Status\n")
+        sb.append("Date & Time,Narration / Payee,Payment Mode,Reference / UPI Number,Category,Withdrawal (Dr \u20B9),Deposit (Cr \u20B9),Running Balance (\u20B9),Status\n")
 
         for (txn in validTxns) {
             val dateStr = sdf.format(Date(txn.timestamp))

@@ -101,7 +101,7 @@ fun AddEditTransactionDialog(
                 OutlinedTextField(
                     value = amountText,
                     onValueChange = { amountText = it },
-                    label = { Text("Amount (₹)") },
+                    label = { Text("Amount (\u20B9)") },
                     placeholder = { Text("e.g. 250.00") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth(),

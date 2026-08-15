@@ -33,13 +33,13 @@ import java.util.*
 fun TransactionDetailDialog(
     transaction: TransactionEntity,
     categoryEmoji: String = "🏷️",
-    currencySymbol: String = "₹",
+    currencySymbol: String = "\u20B9",
     onDismiss: () -> Unit,
     onEdit: (TransactionEntity) -> Unit,
     onDelete: (TransactionEntity) -> Unit
 ) {
     val context = LocalContext.current
-    val cleanCurrency = if (currencySymbol.contains("Ã") || currencySymbol.contains("") || currencySymbol.isBlank()) "₹" else currencySymbol
+    val cleanCurrency = if (currencySymbol.contains("Ã") || currencySymbol.contains("") || currencySymbol.isBlank()) "\u20B9" else currencySymbol
     val fullDateFormat = remember { SimpleDateFormat("EEEE, dd MMM yyyy • hh:mm a", Locale.getDefault()) }
     val fullDateStr = remember(transaction.timestamp) { fullDateFormat.format(Date(transaction.timestamp)) }
     val isIncome = transaction.isIncome
