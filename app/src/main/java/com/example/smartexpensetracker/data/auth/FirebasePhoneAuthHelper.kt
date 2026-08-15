@@ -22,18 +22,18 @@ object FirebasePhoneAuthHelper {
         onVerificationFailed: (e: Exception) -> Unit
     ) {
         val cleanNumber = phoneNumber.filter { it.isDigit() }.let {
-            if (it.length == 10) "+91" else if (!it.startsWith("+")) "+" else it
+            if (it.length == 10) "+91$it" else if (!it.startsWith("+")) "+$it" else it
         }
-        Log.d("FirebaseAuth", "Initiating Firebase Phone Auth for $cleanNumber")
+        Log.i("FirebaseAuth", ">>> Sending Firebase SMS to: $cleanNumber with Activity: ${activity.localClassName}")
 
         val callbacks = object : PhoneAuthProvider.OnVerificationStateChangedCallbacks() {
             override fun onVerificationCompleted(credential: PhoneAuthCredential) {
-                Log.d("FirebaseAuth", "Auto verification completed / instant SMS detected")
+                Log.i("FirebaseAuth", ">>> Firebase Auto Verification completed!")
                 onVerificationCompleted(credential)
             }
 
             override fun onVerificationFailed(e: FirebaseException) {
-                Log.e("FirebaseAuth", "Firebase verification failed: ${e.message}", e)
+                Log.e("FirebaseAuth", ">>> Firebase Verification Failed: ${e.message}", e)
                 onVerificationFailed(e)
             }
 
@@ -41,22 +41,28 @@ object FirebasePhoneAuthHelper {
                 verificationId: String,
                 token: PhoneAuthProvider.ForceResendingToken
             ) {
-                Log.d("FirebaseAuth", "SMS sent successfully! Verification ID: $verificationId")
+                Log.i("FirebaseAuth", ">>> Firebase SMS Sent! Verification ID: $verificationId")
                 storedVerificationId = verificationId
                 resendToken = token
                 onCodeSent(verificationId)
             }
         }
 
-        val optionsBuilder = PhoneAuthOptions.newBuilder(auth)
-            .setPhoneNumber(cleanNumber)
-            .setTimeout(60L, TimeUnit.SECONDS)
-            .setActivity(activity)
-            .setCallbacks(callbacks)
+        try {
+            val optionsBuilder = PhoneAuthOptions.newBuilder(auth)
+                .setPhoneNumber(cleanNumber)
+                .setTimeout(60L, TimeUnit.SECONDS)
+                .setActivity(activity)
+                .setCallbacks(callbacks)
 
-        resendToken?.let { optionsBuilder.setForceResendingToken(it) }
+            resendToken?.let { optionsBuilder.setForceResendingToken(it) }
 
-        PhoneAuthProvider.verifyPhoneNumber(optionsBuilder.build())
+            PhoneAuthProvider.verifyPhoneNumber(optionsBuilder.build())
+            Log.i("FirebaseAuth", ">>> verifyPhoneNumber request submitted to Google Firebase servers")
+        } catch (e: Exception) {
+            Log.e("FirebaseAuth", ">>> Exception starting PhoneAuthProvider: ${e.message}", e)
+            onVerificationFailed(e)
+        }
     }
 
     fun verifyCode(
@@ -66,18 +72,20 @@ object FirebasePhoneAuthHelper {
         onFailure: (Exception) -> Unit
     ) {
         try {
+            Log.i("FirebaseAuth", ">>> Verifying SMS Code: $code for ID: $verificationId")
             val credential = PhoneAuthProvider.getCredential(verificationId, code)
             auth.signInWithCredential(credential)
                 .addOnCompleteListener { task ->
                     if (task.isSuccessful) {
-                        Log.d("FirebaseAuth", "Firebase Sign in success!")
+                        Log.i("FirebaseAuth", ">>> Firebase Sign in SUCCESS!")
                         onSuccess()
                     } else {
-                        Log.e("FirebaseAuth", "Firebase Sign in failed: ${task.exception?.message}")
+                        Log.e("FirebaseAuth", ">>> Firebase Sign in FAILED: ${task.exception?.message}")
                         onFailure(task.exception ?: Exception("Invalid verification code"))
                     }
                 }
         } catch (e: Exception) {
+            Log.e("FirebaseAuth", ">>> Exception in verifyCode: ${e.message}", e)
             onFailure(e)
         }
     }

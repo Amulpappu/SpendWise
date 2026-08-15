@@ -1,6 +1,8 @@
 package com.example.smartexpensetracker.ui.screens.auth
 
 import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
 import android.widget.Toast
 import androidx.compose.animation.*
 import androidx.compose.foundation.Image
@@ -38,6 +40,15 @@ import com.example.smartexpensetracker.ui.theme.SuccessGreen
 import com.example.smartexpensetracker.ui.viewmodel.MainViewModel
 import kotlinx.coroutines.delay
 
+fun Context.findActivity(): Activity? {
+    var currentContext = this
+    while (currentContext is ContextWrapper) {
+        if (currentContext is Activity) return currentContext
+        currentContext = currentContext.baseContext
+    }
+    return null
+}
+
 enum class AuthStep {
     PHONE_INPUT,
     OTP_VERIFICATION,
@@ -51,7 +62,7 @@ fun LoginScreen(
     onLoginSuccess: () -> Unit
 ) {
     val context = LocalContext.current
-    val activity = context as? Activity
+    val activity = remember(context) { context.findActivity() }
     val userProfile by viewModel.userProfile.collectAsState()
 
     var currentStep by remember { mutableStateOf(AuthStep.PHONE_INPUT) }
@@ -64,17 +75,30 @@ fun LoginScreen(
     var isSendingOtp by remember { mutableStateOf(false) }
     var isVerifyingOtp by remember { mutableStateOf(false) }
     var firebaseVerificationId by remember { mutableStateOf<String?>(null) }
-    var generatedLocalOtp by remember { mutableStateOf<String?>(null) }
 
     var resendTimer by remember { mutableStateOf(30) }
     var isTimerRunning by remember { mutableStateOf(false) }
 
-    // Automatic SMS OTP Detection Listener
+    // Automatic SMS OTP Detection Listener (From Device SMS Inbox)
     DisposableEffect(Unit) {
         val listener: (String) -> Unit = { detectedOtp ->
             enteredOtp = detectedOtp
-            val valid = viewModel.verifyOtp(detectedOtp)
-            if (valid) {
+            val vId = firebaseVerificationId
+            if (vId != null) {
+                FirebasePhoneAuthHelper.verifyCode(
+                    verificationId = vId,
+                    code = detectedOtp,
+                    onSuccess = {
+                        viewModel.verifyOtp(detectedOtp)
+                        currentStep = AuthStep.PROFILE_SETUP
+                    },
+                    onFailure = {
+                        if (viewModel.verifyOtp(detectedOtp)) {
+                            currentStep = AuthStep.PROFILE_SETUP
+                        }
+                    }
+                )
+            } else if (viewModel.verifyOtp(detectedOtp)) {
                 currentStep = AuthStep.PROFILE_SETUP
             }
         }
@@ -100,48 +124,44 @@ fun LoginScreen(
             return
         }
 
-        isSendingOtp = true
-        val localOtp = viewModel.sendOtp(phoneNumber)
-        generatedLocalOtp = localOtp
-
-        if (activity != null) {
-            FirebasePhoneAuthHelper.sendVerificationCode(
-                activity = activity,
-                phoneNumber = phoneNumber,
-                onCodeSent = { verificationId ->
-                    firebaseVerificationId = verificationId
-                    isSendingOtp = false
-                    currentStep = AuthStep.OTP_VERIFICATION
-                    resendTimer = 30
-                    isTimerRunning = true
-                    Toast.makeText(context, "OTP sent to +91 $phoneNumber", Toast.LENGTH_LONG).show()
-                },
-                onVerificationCompleted = { credential ->
-                    credential.smsCode?.let { enteredOtp = it }
-                    isSendingOtp = false
-                    currentStep = AuthStep.PROFILE_SETUP
-                    Toast.makeText(context, "Phone Number Verified Automatically!", Toast.LENGTH_SHORT).show()
-                },
-                onVerificationFailed = { e ->
-                    isSendingOtp = false
-                    currentStep = AuthStep.OTP_VERIFICATION
-                    resendTimer = 30
-                    isTimerRunning = true
-                    Toast.makeText(context, "Firebase note: Enter OTP code to verify", Toast.LENGTH_SHORT).show()
-                }
-            )
-        } else {
-            isSendingOtp = false
-            currentStep = AuthStep.OTP_VERIFICATION
-            resendTimer = 30
-            isTimerRunning = true
-            Toast.makeText(context, "OTP sent to +91 $phoneNumber", Toast.LENGTH_SHORT).show()
+        val targetActivity = activity
+        if (targetActivity == null) {
+            Toast.makeText(context, "Cannot find Activity context", Toast.LENGTH_SHORT).show()
+            return
         }
+
+        isSendingOtp = true
+        FirebasePhoneAuthHelper.sendVerificationCode(
+            activity = targetActivity,
+            phoneNumber = phoneNumber,
+            onCodeSent = { verificationId ->
+                firebaseVerificationId = verificationId
+                isSendingOtp = false
+                currentStep = AuthStep.OTP_VERIFICATION
+                resendTimer = 30
+                isTimerRunning = true
+                Toast.makeText(context, "SMS OTP dispatched to +91 $phoneNumber", Toast.LENGTH_LONG).show()
+            },
+            onVerificationCompleted = { credential ->
+                credential.smsCode?.let { enteredOtp = it }
+                isSendingOtp = false
+                currentStep = AuthStep.PROFILE_SETUP
+                Toast.makeText(context, "Phone Number Verified Automatically!", Toast.LENGTH_SHORT).show()
+            },
+            onVerificationFailed = { e ->
+                isSendingOtp = false
+                currentStep = AuthStep.OTP_VERIFICATION
+                resendTimer = 30
+                isTimerRunning = true
+                val msg = e.localizedMessage ?: "Failed to send SMS OTP"
+                Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+            }
+        )
     }
 
     fun triggerOtpVerify() {
         if (enteredOtp.length != 6) {
-            Toast.makeText(context, "Please enter the 6-digit OTP code", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, "Please enter the 6-digit OTP code received via SMS", Toast.LENGTH_SHORT).show()
             return
         }
 
@@ -156,24 +176,18 @@ fun LoginScreen(
                     viewModel.verifyOtp(enteredOtp)
                     currentStep = AuthStep.PROFILE_SETUP
                 },
-                onFailure = {
-                    // Fallback to local OTP verification
-                    val valid = viewModel.verifyOtp(enteredOtp) || enteredOtp == "123456" || enteredOtp == generatedLocalOtp
+                onFailure = { e ->
                     isVerifyingOtp = false
-                    if (valid) {
-                        currentStep = AuthStep.PROFILE_SETUP
-                    } else {
-                        Toast.makeText(context, "Invalid OTP code. Please check.", Toast.LENGTH_LONG).show()
-                    }
+                    Toast.makeText(context, "Invalid OTP code: ${e.message}", Toast.LENGTH_LONG).show()
                 }
             )
         } else {
-            val valid = viewModel.verifyOtp(enteredOtp) || enteredOtp == "123456" || enteredOtp == generatedLocalOtp
+            val valid = viewModel.verifyOtp(enteredOtp)
             isVerifyingOtp = false
             if (valid) {
                 currentStep = AuthStep.PROFILE_SETUP
             } else {
-                Toast.makeText(context, "Invalid OTP code. Please check.", Toast.LENGTH_LONG).show()
+                Toast.makeText(context, "Invalid OTP code. Please check your SMS.", Toast.LENGTH_LONG).show()
             }
         }
     }
@@ -270,7 +284,7 @@ fun LoginScreen(
                             }
 
                             Text(
-                                text = "Enter your 10-digit mobile number to verify your bank SMS identity.",
+                                text = "Enter your 10-digit mobile number to receive a verification OTP via SMS.",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                                 modifier = Modifier.fillMaxWidth()
@@ -306,7 +320,7 @@ fun LoginScreen(
                                 if (isSendingOtp) {
                                     CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.onPrimary)
                                     Spacer(modifier = Modifier.width(8.dp))
-                                    Text("Sending OTP...", fontWeight = FontWeight.Bold)
+                                    Text("Sending SMS OTP...", fontWeight = FontWeight.Bold)
                                 } else {
                                     Text("Get OTP via SMS", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                                     Spacer(modifier = Modifier.width(8.dp))
@@ -331,35 +345,11 @@ fun LoginScreen(
                             }
 
                             Text(
-                                text = "A 6-digit verification code was sent to +91 $phoneNumber",
+                                text = "A 6-digit verification SMS was sent to +91 $phoneNumber",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                                 modifier = Modifier.fillMaxWidth()
                             )
-
-                            // Quick Fill Helper for instant testing
-                            Card(
-                                colors = CardDefaults.cardColors(containerColor = PrimaryEmerald.copy(alpha = 0.12f)),
-                                shape = RoundedCornerShape(12.dp),
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable {
-                                        enteredOtp = generatedLocalOtp ?: "123456"
-                                    }
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Icon(Icons.Default.Key, contentDescription = null, tint = PrimaryEmerald, modifier = Modifier.size(16.dp))
-                                        Spacer(modifier = Modifier.width(6.dp))
-                                        Text("Test OTP: ${generatedLocalOtp ?: "123456"}", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = PrimaryEmerald)
-                                    }
-                                    Text("Tap to Fill", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = PrimaryEmerald)
-                                }
-                            }
 
                             OutlinedTextField(
                                 value = enteredOtp,
@@ -367,7 +357,7 @@ fun LoginScreen(
                                     val digitsOnly = it.filter { ch -> ch.isDigit() }.take(6)
                                     enteredOtp = digitsOnly
                                 },
-                                label = { Text("6-Digit OTP Code") },
+                                label = { Text("6-Digit SMS OTP") },
                                 placeholder = { Text("------") },
                                 leadingIcon = { Icon(Icons.Default.Pin, contentDescription = null) },
                                 keyboardOptions = KeyboardOptions(
