@@ -643,24 +643,24 @@ class AppDatabase private constructor(context: Context) : SQLiteOpenHelper(
         }
 
         val DEFAULT_CATEGORIES = listOf(
-            CategoryEntity("Friends", "👥", true),
-            CategoryEntity("Groceries", "ðŸ¥¦", true),
-            CategoryEntity("Food", "ðŸ”", true),
-            CategoryEntity("Recharge & Bills", "ðŸ“±", true),
-            CategoryEntity("Shopping", "ðŸ›’", true),
-            CategoryEntity("Transport", "ðŸšŒ", true),
-            CategoryEntity("Entertainment", "ðŸŽ¬", true),
-            CategoryEntity("Gaming", "ðŸŽ®", true),
-            CategoryEntity("Salary", "ðŸ’¼", true),
-            CategoryEntity("Income", "ðŸ’µ", true),
-            CategoryEntity("Education", "ðŸŽ“", true),
-            CategoryEntity("Bills", "ðŸ’¡", true),
-            CategoryEntity("Subscriptions", "ðŸ”„", true),
-            CategoryEntity("Travel", "âœˆï¸", true),
-            CategoryEntity("Medical", "ðŸ¥", true),
-            CategoryEntity("Technology", "ðŸ’»", true),
-            CategoryEntity("Home", "ðŸ ", true),
-            CategoryEntity("Other", "ðŸ’°", true)
+            CategoryEntity("Friends", "ðŸ‘¥", true),
+            CategoryEntity("Groceries", "Ã°Å¸Â¥Â¦", true),
+            CategoryEntity("Food", "Ã°Å¸Ââ€", true),
+            CategoryEntity("Recharge & Bills", "Ã°Å¸â€œÂ±", true),
+            CategoryEntity("Shopping", "Ã°Å¸â€ºâ€™", true),
+            CategoryEntity("Transport", "Ã°Å¸Å¡Å’", true),
+            CategoryEntity("Entertainment", "Ã°Å¸Å½Â¬", true),
+            CategoryEntity("Gaming", "Ã°Å¸Å½Â®", true),
+            CategoryEntity("Salary", "Ã°Å¸â€™Â¼", true),
+            CategoryEntity("Income", "Ã°Å¸â€™Âµ", true),
+            CategoryEntity("Education", "Ã°Å¸Å½â€œ", true),
+            CategoryEntity("Bills", "Ã°Å¸â€™Â¡", true),
+            CategoryEntity("Subscriptions", "Ã°Å¸â€â€ž", true),
+            CategoryEntity("Travel", "Ã¢Å“Ë†Ã¯Â¸Â", true),
+            CategoryEntity("Medical", "Ã°Å¸ÂÂ¥", true),
+            CategoryEntity("Technology", "Ã°Å¸â€™Â»", true),
+            CategoryEntity("Home", "Ã°Å¸ÂÂ ", true),
+            CategoryEntity("Other", "Ã°Å¸â€™Â°", true)
         )
     }
 }

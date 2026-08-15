@@ -30,7 +30,7 @@ fun BudgetScreen(viewModel: MainViewModel) {
     var catBudgetInput by remember { mutableStateOf("") }
 
     val totalBudget = budgetEntity?.totalBudget ?: 10000.0
-    val currency = budgetEntity?.currencySymbol ?: "₹"
+    val currency = "₹"
 
     Column(
         modifier = Modifier

@@ -9,7 +9,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -19,10 +18,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -41,10 +39,10 @@ fun TransactionDetailDialog(
     onDelete: (TransactionEntity) -> Unit
 ) {
     val context = LocalContext.current
-    val fullDateFormat = remember { SimpleDateFormat("EEEE, dd MMMM yyyy • hh:mm:ss a", Locale.getDefault()) }
+    val cleanCurrency = if (currencySymbol.contains("Ã") || currencySymbol.contains("") || currencySymbol.isBlank()) "₹" else currencySymbol
+    val fullDateFormat = remember { SimpleDateFormat("EEEE, dd MMM yyyy • hh:mm a", Locale.getDefault()) }
     val fullDateStr = remember(transaction.timestamp) { fullDateFormat.format(Date(transaction.timestamp)) }
     val isIncome = transaction.isIncome
-    val primaryColor = if (isIncome) SuccessGreen else PrimaryEmerald
     val amountColor = if (isIncome) SuccessGreen else MaterialTheme.colorScheme.onSurface
 
     Dialog(onDismissRequest = onDismiss) {
@@ -54,14 +52,14 @@ fun TransactionDetailDialog(
             elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 16.dp)
+                .padding(vertical = 12.dp)
                 .border(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f), RoundedCornerShape(28.dp))
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .verticalScroll(rememberScrollState())
-                    .padding(22.dp),
+                    .padding(20.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 // Top Header Row with Close Button
@@ -87,33 +85,34 @@ fun TransactionDetailDialog(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(14.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
                 // Big Logo / Avatar
                 MerchantLogo(
                     merchant = transaction.merchant,
                     categoryEmoji = categoryEmoji,
                     isIncome = isIncome,
-                    size = 64.dp
+                    size = 60.dp
                 )
 
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(10.dp))
 
                 // Payee / Merchant Name
                 Text(
                     text = transaction.merchant,
-                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold, fontSize = 20.sp),
-                    color = MaterialTheme.colorScheme.onSurface
+                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold, fontSize = 19.sp),
+                    color = MaterialTheme.colorScheme.onSurface,
+                    textAlign = TextAlign.Center
                 )
 
-                Spacer(modifier = Modifier.height(6.dp))
+                Spacer(modifier = Modifier.height(4.dp))
 
                 // Big Amount
                 Text(
-                    text = "${if (isIncome) "+" else "-"}$currencySymbol${String.format("%,.2f", transaction.amount)}",
+                    text = "${if (isIncome) "+" else "-"}$cleanCurrency${String.format(Locale.US, "%,.2f", transaction.amount)}",
                     style = MaterialTheme.typography.headlineMedium.copy(
                         fontWeight = FontWeight.Black,
-                        fontSize = 32.sp
+                        fontSize = 30.sp
                     ),
                     color = amountColor
                 )
@@ -125,7 +124,7 @@ fun TransactionDetailDialog(
                         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
                     ) {
                         Text(
-                            text = "Running Balance: $currencySymbol${String.format("%,.2f", transaction.accountBalance)}",
+                            text = "Running Balance: $cleanCurrency${String.format(Locale.US, "%,.2f", transaction.accountBalance)}",
                             style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
@@ -133,17 +132,17 @@ fun TransactionDetailDialog(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(20.dp))
-                HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
                 Spacer(modifier = Modifier.height(16.dp))
+                HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
+                Spacer(modifier = Modifier.height(14.dp))
 
-                // Detailed Key-Value Grid
+                // Detailed Key-Value Grid with clean non-overlapping flex weights
                 DetailRow(icon = Icons.Default.Category, label = "Category", value = "$categoryEmoji ${transaction.category}")
                 DetailRow(icon = Icons.Default.Schedule, label = "Date & Time", value = fullDateStr)
                 DetailRow(
                     icon = Icons.Default.AccountBalance,
-                    label = "Bank & Account",
-                    value = "${transaction.bankName ?: "Tamilnad Mercantile Bank (TMB)"} ${if (!transaction.accountNumber.isNullOrEmpty()) "(${transaction.accountNumber})" else ""}"
+                    label = "Bank & A/C",
+                    value = "${transaction.bankName ?: "TMB"} ${if (!transaction.accountNumber.isNullOrEmpty()) "(${transaction.accountNumber})" else ""}"
                 )
                 DetailRow(icon = Icons.Default.Payment, label = "Payment Mode", value = transaction.paymentMethod)
 
@@ -155,16 +154,17 @@ fun TransactionDetailDialog(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                        Row(modifier = Modifier.weight(0.42f), verticalAlignment = Alignment.CenterVertically) {
                             Icon(imageVector = Icons.Default.Tag, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text(text = "Ref / Txn ID", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
+                            Text(text = "Ref / Txn ID", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f))
                         }
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                        Row(modifier = Modifier.weight(0.58f), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
                             Text(
                                 text = transaction.refId,
                                 style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-                                color = MaterialTheme.colorScheme.onSurface
+                                color = MaterialTheme.colorScheme.onSurface,
+                                textAlign = TextAlign.End
                             )
                             Spacer(modifier = Modifier.width(4.dp))
                             IconButton(
@@ -182,7 +182,7 @@ fun TransactionDetailDialog(
                 }
 
                 if (transaction.note.isNotBlank()) {
-                    DetailRow(icon = Icons.Default.Notes, label = "Personal Note", value = transaction.note)
+                    DetailRow(icon = Icons.Default.Notes, label = "Note", value = transaction.note)
                 }
 
                 // Raw SMS Card
@@ -214,7 +214,7 @@ fun TransactionDetailDialog(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(22.dp))
+                Spacer(modifier = Modifier.height(20.dp))
 
                 // Bottom Action Buttons
                 Row(
@@ -227,7 +227,7 @@ fun TransactionDetailDialog(
                             val shareBody = """
                                 💳 SpendWise Transaction Receipt
                                 --------------------------------
-                                Amount: ${if (isIncome) "+" else "-"}$currencySymbol${transaction.amount}
+                                Amount: ${if (isIncome) "+" else "-"}$cleanCurrency${transaction.amount}
                                 Payee/Sender: ${transaction.merchant}
                                 Category: ${transaction.category}
                                 Date: $fullDateStr
@@ -298,18 +298,22 @@ private fun DetailRow(
             .fillMaxWidth()
             .padding(vertical = 6.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.Top
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            modifier = Modifier.weight(0.42f),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             Icon(imageVector = icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
             Spacer(modifier = Modifier.width(8.dp))
-            Text(text = label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
+            Text(text = label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f))
         }
         Text(
             text = value,
             style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
             color = MaterialTheme.colorScheme.onSurface,
-            maxLines = 2
+            textAlign = TextAlign.End,
+            modifier = Modifier.weight(0.58f)
         )
     }
 }

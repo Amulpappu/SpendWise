@@ -1,22 +1,19 @@
 package com.example.smartexpensetracker.ui.components
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.smartexpensetracker.data.local.entity.TransactionEntity
@@ -34,6 +31,7 @@ fun TransactionItem(
     onDelete: (TransactionEntity) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+    val cleanCurrency = if (currencySymbol.contains("Ã") || currencySymbol.contains("") || currencySymbol.isBlank()) "₹" else currencySymbol
     val dateFormat = remember { SimpleDateFormat("dd MMM, hh:mm a", Locale.getDefault()) }
     val dateStr = remember(transaction.timestamp) { dateFormat.format(Date(transaction.timestamp)) }
     val isIncome = transaction.isIncome
@@ -46,12 +44,12 @@ fun TransactionItem(
         modifier = modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp)
-            .border(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f), RoundedCornerShape(18.dp))
+            .border(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f), RoundedCornerShape(18.dp))
             .clickable { onClick(transaction) }
     ) {
         Row(
             modifier = Modifier
-                .padding(14.dp)
+                .padding(horizontal = 14.dp, vertical = 12.dp)
                 .fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -64,12 +62,18 @@ fun TransactionItem(
 
             Spacer(modifier = Modifier.width(12.dp))
 
-            Column(modifier = Modifier.weight(1f)) {
+            // Merchant / Payee Info Column (takes flexible space with padding)
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(end = 8.dp)
+            ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = transaction.merchant,
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                        maxLines = 2
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                     if (transaction.isDuplicate) {
                         Spacer(modifier = Modifier.width(6.dp))
@@ -92,7 +96,7 @@ fun TransactionItem(
                         text = transaction.category,
                         style = MaterialTheme.typography.bodyMedium,
                         fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f)
                     )
                     Text(
                         text = " • ",
@@ -104,7 +108,7 @@ fun TransactionItem(
                         text = dateStr,
                         style = MaterialTheme.typography.bodyMedium,
                         fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f)
                     )
                 }
                 if (transaction.note.isNotEmpty()) {
@@ -113,14 +117,20 @@ fun TransactionItem(
                         text = "📝 ${transaction.note}",
                         style = MaterialTheme.typography.bodyMedium,
                         fontSize = 11.sp,
-                        color = MaterialTheme.colorScheme.primary
+                        color = MaterialTheme.colorScheme.primary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
             }
 
-            Column(horizontalAlignment = Alignment.End) {
+            // Amount and Balance Column
+            Column(
+                horizontalAlignment = Alignment.End,
+                modifier = Modifier.wrapContentWidth()
+            ) {
                 Text(
-                    text = "${if (isIncome) "+" else "-"}$currencySymbol${String.format("%.2f", transaction.amount)}",
+                    text = "${if (isIncome) "+" else "-"}$cleanCurrency${String.format(Locale.US, "%,.2f", transaction.amount)}",
                     style = MaterialTheme.typography.titleMedium.copy(
                         fontWeight = FontWeight.ExtraBold,
                         fontSize = 16.sp
@@ -129,7 +139,7 @@ fun TransactionItem(
                 )
                 if (transaction.accountBalance != null) {
                     Text(
-                        text = "Bal: $currencySymbol${String.format("%,.2f", transaction.accountBalance)}",
+                        text = "Bal: $cleanCurrency${String.format(Locale.US, "%,.2f", transaction.accountBalance)}",
                         style = MaterialTheme.typography.labelSmall,
                         fontSize = 10.sp,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
