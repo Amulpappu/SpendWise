@@ -54,7 +54,11 @@ object GoogleSheetsSyncManager {
         val webhookUrl = getWebhookUrl(context)
         if (webhookUrl.isBlank() || transactions.isEmpty()) return@withContext 0
 
-        val nonDuplicates = transactions.filter { !it.isDuplicate }.sortedBy { it.timestamp }
+        // Strict clean list: No duplicates, no zeros, deduplicated by timestamp + amount + merchant
+        val nonDuplicates = transactions
+            .filter { !it.isDuplicate && it.amount > 0.0 }
+            .distinctBy { "${sdf.format(Date(it.timestamp))}_${it.amount}_${it.isIncome}_${it.merchant.trim().uppercase()}" }
+            .sortedBy { it.timestamp }
         if (nonDuplicates.isEmpty()) return@withContext 0
 
         val profile = com.example.smartexpensetracker.data.local.UserProfileManager.getUserProfile(context)

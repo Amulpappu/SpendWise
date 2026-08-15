@@ -94,15 +94,15 @@ object TransactionParser {
 
     // Regex pattern for Available Balance in notifications (e.g. "Current AVBL bal is Rs.991.75", "Clr Bal Rs.19,150.35", "Avbl Bal Rs.40358.35")
     private val BALANCE_PATTERNS = listOf(
-        Pattern.compile("(?:current\\s+)?(?:avbl|avail(?:able)?|clr)\\s*bal(?:ance)?\\s*(?:is|:|-)?\\s*(?:rs\\.?|inr|â‚¹)?\\s*([0-9,]+(?:\\.[0-9]{1,2})?)", Pattern.CASE_INSENSITIVE),
-        Pattern.compile("(?:bal(?:ance)?)\\s*(?:is|:|-)?\\s*(?:rs\\.?|inr|â‚¹)?\\s*([0-9,]+(?:\\.[0-9]{1,2})?)", Pattern.CASE_INSENSITIVE)
+        Pattern.compile("(?:current\\s+)?(?:avbl|avail(?:able)?|clr)\\s*bal(?:ance)?\\s*(?:is|:|-)?\\s*(?:rs\\.?|inr|Ã¢â€šÂ¹)?\\s*([0-9,]+(?:\\.[0-9]{1,2})?)", Pattern.CASE_INSENSITIVE),
+        Pattern.compile("(?:bal(?:ance)?)\\s*(?:is|:|-)?\\s*(?:rs\\.?|inr|Ã¢â€šÂ¹)?\\s*([0-9,]+(?:\\.[0-9]{1,2})?)", Pattern.CASE_INSENSITIVE)
     )
 
-    // Specific transaction amount patterns (e.g. "debited with Rs.50,000.00", "credited Rs.18,419.60", "Paid â‚¹85")
+    // Specific transaction amount patterns (e.g. "debited with Rs.50,000.00", "credited Rs.18,419.60", "Paid Ã¢â€šÂ¹85")
     private val TXN_AMOUNT_PATTERNS = listOf(
-        Pattern.compile("(?:debited\\s+with|credited\\s+with|debited\\s+by|credited\\s+by|credited|debited|paid|spent|sent|received|transferred|transfer|transaction|payment|deposit|added|cashback|refund)\\s+(?:by|with|of|for)?\\s*(?:rs\\.?|inr|â‚¹)?\\s*([0-9,]+(?:\\.[0-9]{1,2})?)", Pattern.CASE_INSENSITIVE),
-        Pattern.compile("(?:rs\\.?|inr|â‚¹)\\s*([0-9,]+(?:\\.[0-9]{1,2})?)", Pattern.CASE_INSENSITIVE),
-        Pattern.compile("([0-9,]+(?:\\.[0-9]{1,2})?)\\s*(?:rs\\.?|inr|â‚¹)", Pattern.CASE_INSENSITIVE)
+        Pattern.compile("(?:debited\\s+with|credited\\s+with|debited\\s+by|credited\\s+by|credited|debited|paid|spent|sent|received|transferred|transfer|transaction|payment|deposit|added|cashback|refund)\\s+(?:by|with|of|for)?\\s*(?:rs\\.?|inr|Ã¢â€šÂ¹)?\\s*([0-9,]+(?:\\.[0-9]{1,2})?)", Pattern.CASE_INSENSITIVE),
+        Pattern.compile("(?:rs\\.?|inr|Ã¢â€šÂ¹)\\s*([0-9,]+(?:\\.[0-9]{1,2})?)", Pattern.CASE_INSENSITIVE),
+        Pattern.compile("([0-9,]+(?:\\.[0-9]{1,2})?)\\s*(?:rs\\.?|inr|Ã¢â€šÂ¹)", Pattern.CASE_INSENSITIVE)
     )
 
     // Linked VPA pattern (e.g. "linked to paytmqr5dbhs9@ptys", "linked to raisesmartlearnsolut.69514104@hdfcbank", "linked to bharatpe.9g0kOu7l3i381424@fbpe")
@@ -114,7 +114,7 @@ object TransactionParser {
 
     // Merchant / Payee extraction patterns
     private val TO_MERCHANT_PATTERN = Pattern.compile(
-        "(?:paid\\s+to|sent\\s+to|paid\\s+(?:rs\\.?|inr|â‚¹)?[0-9,.]+\\s+to|to|at|vpa)\\s+([a-zA-Z0-9&'\\-][a-zA-Z0-9&'\\-\\s]{1,45}?)(?=[\\,\\;\\.]|\\s+(?:on|ref|txn|via|a/c|bal|avail|info|for)|$)",
+        "(?:paid\\s+to|sent\\s+to|paid\\s+(?:rs\\.?|inr|Ã¢â€šÂ¹)?[0-9,.]+\\s+to|to|at|vpa)\\s+([a-zA-Z0-9&'\\-][a-zA-Z0-9&'\\-\\s]{1,45}?)(?=[\\,\\;\\.]|\\s+(?:on|ref|txn|via|a/c|bal|avail|info|for)|$)",
         Pattern.CASE_INSENSITIVE
     )
 
@@ -293,6 +293,10 @@ object TransactionParser {
 
         // 11. Extract Real Transaction Timestamp from SMS Text (fallback to SMS arrival time)
         val transactionTimestamp = extractTimestamp(rawText, fallbackTimestamp)
+
+        if (amount <= 0.0 || amount.isNaN() || amount.isInfinite()) {
+            return null
+        }
 
         return ParsedTransaction(
             amount = amount,

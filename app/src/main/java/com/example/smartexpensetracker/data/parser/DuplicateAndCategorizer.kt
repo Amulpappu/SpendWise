@@ -16,14 +16,21 @@ class DuplicateDetector(private val transactionDao: TransactionDao) {
             }
         }
 
-        // 2. Similar transaction match (same amount + merchant + within 10 mins window)
-        val windowMs = 10 * 60 * 1000L // 10 minutes
+        // 0. Zero amount rejection
+        if (parsed.amount <= 0.0) {
+            return Pair(true, null)
+        }
+
+        // 2. Similar transaction match (same amount + same isIncome + within 12 hours window or same minute)
+        val windowMs = 12 * 60 * 60 * 1000L // 12 hours
         val minTime = parsed.timestamp - windowMs
         val maxTime = parsed.timestamp + windowMs
 
         val recents = transactionDao.findRecentTransactions(minTime, maxTime)
         val similar = recents.firstOrNull {
-            it.amount == parsed.amount && it.merchant.equals(parsed.merchant, ignoreCase = true)
+            it.amount == parsed.amount &&
+            it.isIncome == parsed.isIncome &&
+            (it.merchant.equals(parsed.merchant, ignoreCase = true) || Math.abs(it.timestamp - parsed.timestamp) < 120000L)
         }
 
         if (similar != null) {
