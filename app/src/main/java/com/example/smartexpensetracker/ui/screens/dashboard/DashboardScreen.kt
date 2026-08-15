@@ -73,7 +73,7 @@ fun DashboardScreen(
     var txnToEdit by remember { mutableStateOf<TransactionEntity?>(null) }
 
     val budget = budgetEntity?.totalBudget ?: 0.0
-    val currency = budgetEntity?.currencySymbol ?: "ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¹"
+    val currency = "₹"
     val netBalance = totalIncome - totalExpense
     val usedPct = if (budget > 0) ((totalExpense / budget) * 100).toInt().coerceIn(0, 100) else 0
 
@@ -241,14 +241,14 @@ fun DashboardScreen(
                     // Service 2: Google Sheets Live Sync
                     QuickServiceTile(
                         icon = if (isSyncingSheet) Icons.Default.HourglassTop else Icons.Default.CloudSync,
-                        label = if (isSyncingSheet) "Syncing..." else "Sheet Sync",
+                        label = if (isSyncingSheet) "Syncing..." else "••••••••",
                         color = PrimaryEmerald,
                         onClick = {
                             coroutineScope.launch {
                                 isSyncingSheet = true
                                 val synced = com.example.smartexpensetracker.data.export.GoogleSheetsSyncManager.syncAllTransactionsToSheet(context, allTransactions)
                                 isSyncingSheet = false
-                                Toast.makeText(context, "ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Synced $synced historical transactions to Google Sheet!", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, "ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ Synced $synced historical transactions to Google Sheet!", Toast.LENGTH_SHORT).show()
                             }
                         }
                     )
@@ -368,8 +368,8 @@ fun DashboardScreen(
 
                         Text(
                             text = if (showBalance) {
-                                if (latestBankBal != null) "$currency${String.format("%,.2f", latestBankBal)}" else "$currency${String.format("%,.2f", (353.35).coerceAtLeast(netBalance))}"
-                            } else "ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢",
+                                if (latestBankBal != null) "$currency${String.format("%,.2f", latestBankBal)}" else "••••••••"%,.2f", (353.35).coerceAtLeast(netBalance))}"
+                            } else "••••••••",
                             style = MaterialTheme.typography.headlineLarge.copy(fontSize = 32.sp, fontWeight = FontWeight.Black),
                             color = PrimaryEmeraldLight
                         )
@@ -497,12 +497,12 @@ fun DashboardScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = if (searchQuery.isNotBlank()) "Search Results (${filteredTransactions.size})" else "Recent Transactions",
+                    text = if (searchQuery.isNotBlank()) "Search Results (${filteredTransactions.size})" else "••••••••",
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
                 )
 
                 Text(
-                    text = "View All ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢",
+                    text = "View All ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢",
                     style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
                     color = PrimaryEmerald,
                     modifier = Modifier.clickable(onClick = onNavigateToTransactions)
@@ -544,7 +544,7 @@ fun DashboardScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = if (searchQuery.isNotBlank()) "No transaction matching \"$searchQuery\"" else "No transactions yet. Scan SMS to get started!",
+                            text = if (searchQuery.isNotBlank()) "No transaction matching \"$searchQuery\"" else "••••••••",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                         )
@@ -553,7 +553,7 @@ fun DashboardScreen(
             } else {
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                         filteredTransactions.take(8).forEach { txn ->
-                        val emoji = categories.find { it.name.equals(txn.category, ignoreCase = true) }?.emoji ?: "Ã°Å¸ÂÂ·Ã¯Â¸Â"
+                        val emoji = categories.find { it.name.equals(txn.category, ignoreCase = true) }?.emoji ?: "ÃƒÂ°Ã…Â¸Ã‚ÂÃ‚Â·ÃƒÂ¯Ã‚Â¸Ã‚Â"
                         TransactionItem(
                             transaction = txn,
                             categoryEmoji = emoji,
@@ -570,7 +570,7 @@ fun DashboardScreen(
     }
 
     if (selectedTxnForDetails != null) {
-        val emoji = categories.find { it.name.equals(selectedTxnForDetails?.category, ignoreCase = true) }?.emoji ?: "ðŸ·ï¸"
+        val emoji = categories.find { it.name.equals(selectedTxnForDetails?.category, ignoreCase = true) }?.emoji ?: "Ã°Å¸ÂÂ·Ã¯Â¸Â"
         TransactionDetailDialog(
             transaction = selectedTxnForDetails!!,
             categoryEmoji = emoji,

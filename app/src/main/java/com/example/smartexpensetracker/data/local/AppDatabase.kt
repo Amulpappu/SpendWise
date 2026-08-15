@@ -51,6 +51,13 @@ class AppDatabase private constructor(context: Context) : SQLiteOpenHelper(
         try {
             db.execSQL("ALTER TABLE transactions ADD COLUMN accountBalance REAL")
         } catch (e: Exception) {}
+        try {
+            db.execSQL("UPDATE monthly_budget SET currencySymbol = '₹'")
+        } catch (e: Exception) {}
+    } catch (e: Exception) {}
+        try {
+            db.execSQL("ALTER TABLE transactions ADD COLUMN accountBalance REAL")
+        } catch (e: Exception) {}
     }
 
     override fun onCreate(db: SQLiteDatabase) {
@@ -337,7 +344,7 @@ class AppDatabase private constructor(context: Context) : SQLiteOpenHelper(
                     return BudgetEntity(
                         monthKey = cursor.getString(cursor.getColumnIndexOrThrow("monthKey")),
                         totalBudget = cursor.getDouble(cursor.getColumnIndexOrThrow("totalBudget")),
-                        currencySymbol = cursor.getString(cursor.getColumnIndexOrThrow("currencySymbol")),
+                        currencySymbol = "₹",
                         warn75Sent = cursor.getInt(cursor.getColumnIndexOrThrow("warn75Sent")) == 1,
                         warn90Sent = cursor.getInt(cursor.getColumnIndexOrThrow("warn90Sent")) == 1,
                         warn100Sent = cursor.getInt(cursor.getColumnIndexOrThrow("warn100Sent")) == 1
@@ -352,7 +359,7 @@ class AppDatabase private constructor(context: Context) : SQLiteOpenHelper(
             val cv = ContentValues().apply {
                 put("monthKey", budget.monthKey)
                 put("totalBudget", budget.totalBudget)
-                put("currencySymbol", budget.currencySymbol)
+                put("currencySymbol", "₹")
                 put("warn75Sent", if (budget.warn75Sent) 1 else 0)
                 put("warn90Sent", if (budget.warn90Sent) 1 else 0)
                 put("warn100Sent", if (budget.warn100Sent) 1 else 0)
@@ -643,24 +650,24 @@ class AppDatabase private constructor(context: Context) : SQLiteOpenHelper(
         }
 
         val DEFAULT_CATEGORIES = listOf(
-            CategoryEntity("Friends", "ðŸ‘¥", true),
-            CategoryEntity("Groceries", "Ã°Å¸Â¥Â¦", true),
-            CategoryEntity("Food", "Ã°Å¸Ââ€", true),
-            CategoryEntity("Recharge & Bills", "Ã°Å¸â€œÂ±", true),
-            CategoryEntity("Shopping", "Ã°Å¸â€ºâ€™", true),
-            CategoryEntity("Transport", "Ã°Å¸Å¡Å’", true),
-            CategoryEntity("Entertainment", "Ã°Å¸Å½Â¬", true),
-            CategoryEntity("Gaming", "Ã°Å¸Å½Â®", true),
-            CategoryEntity("Salary", "Ã°Å¸â€™Â¼", true),
-            CategoryEntity("Income", "Ã°Å¸â€™Âµ", true),
-            CategoryEntity("Education", "Ã°Å¸Å½â€œ", true),
-            CategoryEntity("Bills", "Ã°Å¸â€™Â¡", true),
-            CategoryEntity("Subscriptions", "Ã°Å¸â€â€ž", true),
-            CategoryEntity("Travel", "Ã¢Å“Ë†Ã¯Â¸Â", true),
-            CategoryEntity("Medical", "Ã°Å¸ÂÂ¥", true),
-            CategoryEntity("Technology", "Ã°Å¸â€™Â»", true),
-            CategoryEntity("Home", "Ã°Å¸ÂÂ ", true),
-            CategoryEntity("Other", "Ã°Å¸â€™Â°", true)
+            CategoryEntity("Friends", "Ã°Å¸â€˜Â¥", true),
+            CategoryEntity("Groceries", "ÃƒÂ°Ã…Â¸Ã‚Â¥Ã‚Â¦", true),
+            CategoryEntity("Food", "ÃƒÂ°Ã…Â¸Ã‚ÂÃ¢â‚¬Â", true),
+            CategoryEntity("Recharge & Bills", "ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â±", true),
+            CategoryEntity("Shopping", "ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂºÃ¢â‚¬â„¢", true),
+            CategoryEntity("Transport", "ÃƒÂ°Ã…Â¸Ã…Â¡Ã…â€™", true),
+            CategoryEntity("Entertainment", "ÃƒÂ°Ã…Â¸Ã…Â½Ã‚Â¬", true),
+            CategoryEntity("Gaming", "ÃƒÂ°Ã…Â¸Ã…Â½Ã‚Â®", true),
+            CategoryEntity("Salary", "ÃƒÂ°Ã…Â¸Ã¢â‚¬â„¢Ã‚Â¼", true),
+            CategoryEntity("Income", "ÃƒÂ°Ã…Â¸Ã¢â‚¬â„¢Ã‚Âµ", true),
+            CategoryEntity("Education", "ÃƒÂ°Ã…Â¸Ã…Â½Ã¢â‚¬Å“", true),
+            CategoryEntity("Bills", "ÃƒÂ°Ã…Â¸Ã¢â‚¬â„¢Ã‚Â¡", true),
+            CategoryEntity("Subscriptions", "ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬Å¾", true),
+            CategoryEntity("Travel", "ÃƒÂ¢Ã…â€œÃ‹â€ ÃƒÂ¯Ã‚Â¸Ã‚Â", true),
+            CategoryEntity("Medical", "ÃƒÂ°Ã…Â¸Ã‚ÂÃ‚Â¥", true),
+            CategoryEntity("Technology", "ÃƒÂ°Ã…Â¸Ã¢â‚¬â„¢Ã‚Â»", true),
+            CategoryEntity("Home", "ÃƒÂ°Ã…Â¸Ã‚ÂÃ‚Â ", true),
+            CategoryEntity("Other", "ÃƒÂ°Ã…Â¸Ã¢â‚¬â„¢Ã‚Â°", true)
         )
     }
 }
