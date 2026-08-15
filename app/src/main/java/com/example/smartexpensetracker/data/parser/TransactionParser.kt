@@ -94,15 +94,15 @@ object TransactionParser {
 
     // Regex pattern for Available Balance in notifications (e.g. "Current AVBL bal is Rs.991.75", "Clr Bal Rs.19,150.35", "Avbl Bal Rs.40358.35")
     private val BALANCE_PATTERNS = listOf(
-        Pattern.compile("(?:current\\s+)?(?:avbl|avail(?:able)?|clr)\\s*bal(?:ance)?\\s*(?:is|:|-)?\\s*(?:rs\\.?|inr|Ã¢â€šÂ¹)?\\s*([0-9,]+(?:\\.[0-9]{1,2})?)", Pattern.CASE_INSENSITIVE),
-        Pattern.compile("(?:bal(?:ance)?)\\s*(?:is|:|-)?\\s*(?:rs\\.?|inr|Ã¢â€šÂ¹)?\\s*([0-9,]+(?:\\.[0-9]{1,2})?)", Pattern.CASE_INSENSITIVE)
+        Pattern.compile("(?:current\\s+)?(?:avbl|avail(?:able)?|clr)\\s*bal(?:ance)?\\s*(?:is|:|-)?\\s*(?:rs\\.?|inr|ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¹)?\\s*([0-9,]+(?:\\.[0-9]{1,2})?)", Pattern.CASE_INSENSITIVE),
+        Pattern.compile("(?:bal(?:ance)?)\\s*(?:is|:|-)?\\s*(?:rs\\.?|inr|ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¹)?\\s*([0-9,]+(?:\\.[0-9]{1,2})?)", Pattern.CASE_INSENSITIVE)
     )
 
-    // Specific transaction amount patterns (e.g. "debited with Rs.50,000.00", "credited Rs.18,419.60", "Paid Ã¢â€šÂ¹85")
+    // Specific transaction amount patterns (e.g. "debited with Rs.50,000.00", "credited Rs.18,419.60", "Paid ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¹85")
     private val TXN_AMOUNT_PATTERNS = listOf(
-        Pattern.compile("(?:debited\\s+with|credited\\s+with|debited\\s+by|credited\\s+by|credited|debited|paid|spent|sent|received|transferred|transfer|transaction|payment|deposit|added|cashback|refund)\\s+(?:by|with|of|for)?\\s*(?:rs\\.?|inr|Ã¢â€šÂ¹)?\\s*([0-9,]+(?:\\.[0-9]{1,2})?)", Pattern.CASE_INSENSITIVE),
-        Pattern.compile("(?:rs\\.?|inr|Ã¢â€šÂ¹)\\s*([0-9,]+(?:\\.[0-9]{1,2})?)", Pattern.CASE_INSENSITIVE),
-        Pattern.compile("([0-9,]+(?:\\.[0-9]{1,2})?)\\s*(?:rs\\.?|inr|Ã¢â€šÂ¹)", Pattern.CASE_INSENSITIVE)
+        Pattern.compile("(?:debited\\s+with|credited\\s+with|debited\\s+by|credited\\s+by|credited\\s+for|credited|debited|paid|spent|sent|received|transferred|transfer|transaction|payment|deposit|deposited|added|cashback|refund)\\s+(?:by|with|of|for)?\\s*(?:rs\\.?|inr|₹)?\\s*([0-9,]+(?:\\.[0-9]{1,2})?)", Pattern.CASE_INSENSITIVE),
+        Pattern.compile("(?:rs\\.?|inr|₹)\\s*([0-9,]+(?:\\.[0-9]{1,2})?)", Pattern.CASE_INSENSITIVE),
+        Pattern.compile("([0-9,]+(?:\\.[0-9]{1,2})?)\\s*(?:rs\\.?|inr|₹)", Pattern.CASE_INSENSITIVE)
     )
 
     // Linked VPA pattern (e.g. "linked to paytmqr5dbhs9@ptys", "linked to raisesmartlearnsolut.69514104@hdfcbank", "linked to bharatpe.9g0kOu7l3i381424@fbpe")
@@ -114,7 +114,7 @@ object TransactionParser {
 
     // Merchant / Payee extraction patterns
     private val TO_MERCHANT_PATTERN = Pattern.compile(
-        "(?:paid\\s+to|sent\\s+to|paid\\s+(?:rs\\.?|inr|Ã¢â€šÂ¹)?[0-9,.]+\\s+to|to|at|vpa)\\s+([a-zA-Z0-9&'\\-][a-zA-Z0-9&'\\-\\s]{1,45}?)(?=[\\,\\;\\.]|\\s+(?:on|ref|txn|via|a/c|bal|avail|info|for)|$)",
+        "(?:paid\\s+to|sent\\s+to|paid\\s+(?:rs\\.?|inr|ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¹)?[0-9,.]+\\s+to|to|at|vpa)\\s+([a-zA-Z0-9&'\\-][a-zA-Z0-9&'\\-\\s]{1,45}?)(?=[\\,\\;\\.]|\\s+(?:on|ref|txn|via|a/c|bal|avail|info|for)|$)",
         Pattern.CASE_INSENSITIVE
     )
 
@@ -172,28 +172,40 @@ object TransactionParser {
             }
         }
 
-        // 5. Determine Debit (Expense) vs Credit (Income) with strict precedence
+        // 5. Determine Debit (Expense) vs Credit (Income) with comprehensive bank expressions
+        val hasCreditIndicator = lowerText.contains("credited") ||
+                lowerText.contains("received") ||
+                lowerText.contains("deposit") ||
+                lowerText.contains("deposited") ||
+                lowerText.contains("cashback") ||
+                lowerText.contains("refund") ||
+                lowerText.contains("added to") ||
+                lowerText.contains("cr to") ||
+                lowerText.contains("cr.") ||
+                lowerText.contains("inward") ||
+                lowerText.contains("salary") ||
+                lowerText.contains("interest credited")
+
         val hasDebitIndicator = lowerText.contains("debited") ||
                 lowerText.contains("paid") ||
                 lowerText.contains("spent") ||
                 lowerText.contains("sent") ||
-                lowerText.contains("withdrawn")
-
-        val hasCreditIndicator = lowerText.contains("credited") ||
-                lowerText.contains("received") ||
-                lowerText.contains("deposit") ||
-                lowerText.contains("cashback") ||
-                lowerText.contains("refund")
+                lowerText.contains("withdrawn") ||
+                lowerText.contains("purchase") ||
+                lowerText.contains("dr to") ||
+                lowerText.contains("dr.")
 
         if (!hasDebitIndicator && !hasCreditIndicator && !lowerText.contains("transaction") && !lowerText.contains("upi")) {
             return null
         }
 
         val isIncome = when {
-            lowerText.contains("is debited with") || lowerText.contains("is debited") || lowerText.contains("debited from") || lowerText.contains("debited by") -> false
-            lowerText.contains("is credited with") || lowerText.contains("is credited") || lowerText.contains("credited by") || lowerText.contains("credited rs") || lowerText.contains("credited") -> true
-            sender != null && sender.uppercase().contains("TMBANK") && !sender.uppercase().contains("TMBANK-S") -> true
+            lowerText.contains("is credited with") || lowerText.contains("is credited") || lowerText.contains("credited by") || lowerText.contains("credited rs") || lowerText.contains("credited for") || lowerText.contains("credited to") || lowerText.contains("has been credited") -> true
+            lowerText.contains("received rs") || lowerText.contains("money received") || lowerText.contains("you received") || lowerText.contains("deposited") || lowerText.contains("cashback") || lowerText.contains("refund") -> true
+            lowerText.contains("is debited with") || lowerText.contains("is debited") || lowerText.contains("debited from") || lowerText.contains("debited by") || lowerText.contains("debited rs") || lowerText.contains("debited for") -> false
             hasCreditIndicator && !hasDebitIndicator -> true
+            hasDebitIndicator && !hasCreditIndicator -> false
+            hasCreditIndicator -> true
             else -> false
         }
 

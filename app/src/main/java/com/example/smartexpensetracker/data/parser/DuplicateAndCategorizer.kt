@@ -8,7 +8,12 @@ import java.util.regex.Pattern
 class DuplicateDetector(private val transactionDao: TransactionDao) {
 
     suspend fun checkDuplicate(parsed: ParsedTransaction): Pair<Boolean, Long?> {
-        // 1. Ref ID match
+        // 0. Zero amount rejection
+        if (parsed.amount <= 0.0) {
+            return Pair(true, null)
+        }
+
+        // 1. Ref ID match (Primary unique key)
         if (!parsed.refId.isNullOrEmpty()) {
             val existing = transactionDao.findByRefId(parsed.refId)
             if (existing != null) {
@@ -16,25 +21,20 @@ class DuplicateDetector(private val transactionDao: TransactionDao) {
             }
         }
 
-        // 0. Zero amount rejection
-        if (parsed.amount <= 0.0) {
-            return Pair(true, null)
-        }
-
-        // 2. Similar transaction match (same amount + same isIncome + within 12 hours window or same minute)
-        val windowMs = 12 * 60 * 60 * 1000L // 12 hours
+        // 2. Exact carrier duplicate match: only within 2 minutes window with same amount and exact raw text / merchant
+        val windowMs = 2 * 60 * 1000L // 2 minutes carrier duplication window
         val minTime = parsed.timestamp - windowMs
         val maxTime = parsed.timestamp + windowMs
 
         val recents = transactionDao.findRecentTransactions(minTime, maxTime)
-        val similar = recents.firstOrNull {
+        val exactDuplicate = recents.firstOrNull {
             it.amount == parsed.amount &&
             it.isIncome == parsed.isIncome &&
-            (it.merchant.equals(parsed.merchant, ignoreCase = true) || Math.abs(it.timestamp - parsed.timestamp) < 120000L)
+            (it.rawText == parsed.rawSanitizedText || it.merchant.equals(parsed.merchant, ignoreCase = true))
         }
 
-        if (similar != null) {
-            return Pair(true, similar.id)
+        if (exactDuplicate != null) {
+            return Pair(true, exactDuplicate.id)
         }
 
         return Pair(false, null)
