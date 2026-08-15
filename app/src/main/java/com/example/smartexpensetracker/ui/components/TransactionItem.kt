@@ -27,10 +27,11 @@ import java.util.*
 @Composable
 fun TransactionItem(
     transaction: TransactionEntity,
-    categoryEmoji: String = "💰",
+    categoryEmoji: String = "🏷️",
     currencySymbol: String = "₹",
-    onEdit: (TransactionEntity) -> Unit,
-    onDelete: (TransactionEntity) -> Unit,
+    onClick: (TransactionEntity) -> Unit = {},
+    onEdit: (TransactionEntity) -> Unit = {},
+    onDelete: (TransactionEntity) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val dateFormat = remember { SimpleDateFormat("dd MMM, hh:mm a", Locale.getDefault()) }
@@ -46,6 +47,7 @@ fun TransactionItem(
             .fillMaxWidth()
             .padding(vertical = 4.dp)
             .border(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f), RoundedCornerShape(18.dp))
+            .clickable { onClick(transaction) }
     ) {
         Row(
             modifier = Modifier
@@ -108,7 +110,7 @@ fun TransactionItem(
                 if (transaction.note.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = "💬 ${transaction.note}",
+                        text = "📝 ${transaction.note}",
                         style = MaterialTheme.typography.bodyMedium,
                         fontSize = 11.sp,
                         color = MaterialTheme.colorScheme.primary

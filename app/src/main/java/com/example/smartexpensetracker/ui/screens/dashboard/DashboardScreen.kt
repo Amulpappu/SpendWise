@@ -28,9 +28,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.smartexpensetracker.R
 import com.example.smartexpensetracker.data.model.BankDirectory
+import com.example.smartexpensetracker.data.local.entity.TransactionEntity
+import com.example.smartexpensetracker.ui.components.AddEditTransactionDialog
 import com.example.smartexpensetracker.ui.components.CategoryPieChart
 import com.example.smartexpensetracker.ui.components.MetricCard
 import com.example.smartexpensetracker.ui.components.SpendingTrendChart
+import com.example.smartexpensetracker.ui.components.TransactionDetailDialog
 import com.example.smartexpensetracker.ui.components.TransactionItem
 import com.example.smartexpensetracker.ui.theme.*
 import com.example.smartexpensetracker.ui.viewmodel.MainViewModel
@@ -66,9 +69,11 @@ fun DashboardScreen(
     var selectedFilter by remember { mutableStateOf("All") } // "All", "Expense", "Income"
     var showBalance by remember { mutableStateOf(true) }
     var isSyncingSheet by remember { mutableStateOf(false) }
+    var selectedTxnForDetails by remember { mutableStateOf<TransactionEntity?>(null) }
+    var txnToEdit by remember { mutableStateOf<TransactionEntity?>(null) }
 
     val budget = budgetEntity?.totalBudget ?: 0.0
-    val currency = budgetEntity?.currencySymbol ?: "₹"
+    val currency = budgetEntity?.currencySymbol ?: "â‚¹"
     val netBalance = totalIncome - totalExpense
     val usedPct = if (budget > 0) ((totalExpense / budget) * 100).toInt().coerceIn(0, 100) else 0
 
@@ -243,7 +248,7 @@ fun DashboardScreen(
                                 isSyncingSheet = true
                                 val synced = com.example.smartexpensetracker.data.export.GoogleSheetsSyncManager.syncAllTransactionsToSheet(context, allTransactions)
                                 isSyncingSheet = false
-                                Toast.makeText(context, "✅ Synced $synced historical transactions to Google Sheet!", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, "âœ… Synced $synced historical transactions to Google Sheet!", Toast.LENGTH_SHORT).show()
                             }
                         }
                     )
@@ -364,7 +369,7 @@ fun DashboardScreen(
                         Text(
                             text = if (showBalance) {
                                 if (latestBankBal != null) "$currency${String.format("%,.2f", latestBankBal)}" else "$currency${String.format("%,.2f", (353.35).coerceAtLeast(netBalance))}"
-                            } else "••••••••",
+                            } else "â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢",
                             style = MaterialTheme.typography.headlineLarge.copy(fontSize = 32.sp, fontWeight = FontWeight.Black),
                             color = PrimaryEmeraldLight
                         )
@@ -497,7 +502,7 @@ fun DashboardScreen(
                 )
 
                 Text(
-                    text = "View All →",
+                    text = "View All â†’",
                     style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
                     color = PrimaryEmerald,
                     modifier = Modifier.clickable(onClick = onNavigateToTransactions)
@@ -547,12 +552,13 @@ fun DashboardScreen(
                 }
             } else {
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    filteredTransactions.take(8).forEach { txn ->
-                        val emoji = categories.find { it.name.equals(txn.category, ignoreCase = true) }?.emoji ?: "💰"
+                                        filteredTransactions.take(8).forEach { txn ->
+                        val emoji = categories.find { it.name.equals(txn.category, ignoreCase = true) }?.emoji ?: "🏷️"
                         TransactionItem(
                             transaction = txn,
                             categoryEmoji = emoji,
-                            onEdit = {},
+                            onClick = { selectedTxnForDetails = it },
+                            onEdit = { txnToEdit = it },
                             onDelete = { viewModel.deleteTransaction(it) }
                         )
                     }
@@ -597,6 +603,43 @@ fun QuickServiceTile(
             text = label,
             style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
             fontSize = 11.sp
+        )
+    if (selectedTxnForDetails != null) {
+        val emoji = categories.find { it.name.equals(selectedTxnForDetails?.category, ignoreCase = true) }?.emoji ?: "🏷️"
+        TransactionDetailDialog(
+            transaction = selectedTxnForDetails!!,
+            categoryEmoji = emoji,
+            currencySymbol = currency,
+            onDismiss = { selectedTxnForDetails = null },
+            onEdit = {
+                val t = it
+                selectedTxnForDetails = null
+                txnToEdit = t
+            },
+            onDelete = {
+                viewModel.deleteTransaction(it)
+                selectedTxnForDetails = null
+            }
+        )
+    }
+
+    if (txnToEdit != null) {
+        AddEditTransactionDialog(
+            transactionToEdit = txnToEdit,
+            categories = categories,
+            onDismiss = { txnToEdit = null },
+            onSave = { amt, isInc, merch, cat, method, note ->
+                val updated = txnToEdit!!.copy(
+                    amount = amt,
+                    isIncome = isInc,
+                    merchant = merch,
+                    category = cat,
+                    paymentMethod = method,
+                    note = note
+                )
+                viewModel.updateTransaction(updated)
+                txnToEdit = null
+            }
         )
     }
 }

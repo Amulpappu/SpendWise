@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.sp
 import com.example.smartexpensetracker.data.local.entity.TransactionEntity
 import com.example.smartexpensetracker.ui.components.AddEditTransactionDialog
 import com.example.smartexpensetracker.ui.components.CategoryChip
+import com.example.smartexpensetracker.ui.components.TransactionDetailDialog
 import com.example.smartexpensetracker.ui.components.TransactionItem
 import com.example.smartexpensetracker.ui.theme.PrimaryEmerald
 import com.example.smartexpensetracker.ui.theme.SuccessGreen
@@ -62,7 +63,7 @@ fun TransactionsScreen(
                 fullDateFormat.format(Date(selectedStartDate!!))
             }
         } else {
-            "Between Dates 📅"
+            "Between Dates ðŸ“…"
         }
     }
 
@@ -212,14 +213,14 @@ fun TransactionsScreen(
                 FilterChip(
                     selected = selectedType == "Expense",
                     onClick = { viewModel.selectedTypeFilter.value = if (selectedType == "Expense") null else "Expense" },
-                    label = { Text("Expenses (Debited 🔴)") },
+                    label = { Text("Expenses (Debited ðŸ”´)") },
                     modifier = Modifier.padding(end = 6.dp)
                 )
 
                 FilterChip(
                     selected = selectedType == "Income",
                     onClick = { viewModel.selectedTypeFilter.value = if (selectedType == "Income") null else "Income" },
-                    label = { Text("Income (Credited 🟢)") },
+                    label = { Text("Income (Credited ðŸŸ¢)") },
                     modifier = Modifier.padding(end = 6.dp)
                 )
 
@@ -284,7 +285,7 @@ fun TransactionsScreen(
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                 )
                 Text(
-                    text = "Net: ${if (totalSum >= 0) "+" else "-"}₹${String.format(Locale.getDefault(), "%,.2f", Math.abs(totalSum))}",
+                    text = "Net: ${if (totalSum >= 0) "+" else "-"}â‚¹${String.format(Locale.getDefault(), "%,.2f", Math.abs(totalSum))}",
                     style = MaterialTheme.typography.labelLarge.copy(
                         fontWeight = FontWeight.Bold,
                         color = if (totalSum >= 0) SuccessGreen else MaterialTheme.colorScheme.error
@@ -322,9 +323,12 @@ fun TransactionsScreen(
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                     contentPadding = PaddingValues(bottom = 80.dp)
                 ) {
-                    items(filteredTxns, key = { it.id }) { txn ->
+                                        items(filteredTxns, key = { it.id }) { txn ->
+                        val emoji = categories.find { it.name.equals(txn.category, ignoreCase = true) }?.emoji ?: "🏷️"
                         TransactionItem(
                             transaction = txn,
+                            categoryEmoji = emoji,
+                            onClick = { selectedTxnForDetails = it },
                             onEdit = {
                                 transactionToEdit = it
                                 showEditDialog = true
@@ -383,6 +387,26 @@ fun TransactionsScreen(
                 }
             )
         }
+    }
+
+    if (selectedTxnForDetails != null) {
+        val emoji = categories.find { it.name.equals(selectedTxnForDetails?.category, ignoreCase = true) }?.emoji ?: "🏷️"
+        TransactionDetailDialog(
+            transaction = selectedTxnForDetails!!,
+            categoryEmoji = emoji,
+            currencySymbol = "₹",
+            onDismiss = { selectedTxnForDetails = null },
+            onEdit = {
+                val t = it
+                selectedTxnForDetails = null
+                transactionToEdit = t
+                showEditDialog = true
+            },
+            onDelete = {
+                viewModel.deleteTransaction(it)
+                selectedTxnForDetails = null
+            }
+        )
     }
 
     if (showEditDialog) {
