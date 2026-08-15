@@ -14,12 +14,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-class AppDatabase private constructor(context: Context) : SQLiteOpenHelper(
-    context.applicationContext,
-    "smart_expense_tracker_native.db",
-    null,
-    1
-) {
+class AppDatabase private constructor(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
 
     private val dbScope = CoroutineScope(Dispatchers.IO)
 
@@ -34,7 +29,6 @@ class AppDatabase private constructor(context: Context) : SQLiteOpenHelper(
     private val _monthlySummariesMap = mutableMapOf<String, MutableStateFlow<MonthlySummaryEntity?>>()
 
     init {
-        // Initial load in background
         dbScope.launch {
             refreshTransactions()
             refreshCategories()
@@ -52,11 +46,7 @@ class AppDatabase private constructor(context: Context) : SQLiteOpenHelper(
             db.execSQL("ALTER TABLE transactions ADD COLUMN accountBalance REAL")
         } catch (e: Exception) {}
         try {
-            db.execSQL("UPDATE monthly_budget SET currencySymbol = '₹'")
-        } catch (e: Exception) {}
-    } catch (e: Exception) {}
-        try {
-            db.execSQL("ALTER TABLE transactions ADD COLUMN accountBalance REAL")
+            db.execSQL("UPDATE monthly_budget SET currencySymbol = 'â‚¹'")
         } catch (e: Exception) {}
     }
 
@@ -151,7 +141,6 @@ class AppDatabase private constructor(context: Context) : SQLiteOpenHelper(
             )
         """.trimIndent())
 
-        // Prepopulate default categories
         for (cat in DEFAULT_CATEGORIES) {
             val cv = ContentValues().apply {
                 put("name", cat.name)
@@ -160,31 +149,19 @@ class AppDatabase private constructor(context: Context) : SQLiteOpenHelper(
             }
             db.insertWithOnConflict("categories", null, cv, SQLiteDatabase.CONFLICT_IGNORE)
         }
+    }
 
-        // Prepopulate default merchant rules
-        val defaultRules = listOf(
-            "SWIGGY" to "Food",
-            "ZOMATO" to "Food",
-            "UBER" to "Transport",
-            "OLA" to "Transport",
-            "AMAZON" to "Shopping",
-            "FLIPKART" to "Shopping",
-            "NETFLIX" to "Subscriptions",
-            "SPOTIFY" to "Subscriptions"
-        )
-        for ((m, c) in defaultRules) {
-            val cv = ContentValues().apply {
-                put("merchantPattern", m)
-                put("categoryName", c)
-                put("userCreated", 0)
-            }
-            db.insertWithOnConflict("merchant_rules", null, cv, SQLiteDatabase.CONFLICT_IGNORE)
+    override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
+        if (oldVersion < 2) {
+            try {
+                db.execSQL("ALTER TABLE transactions ADD COLUMN accountNumber TEXT")
+            } catch (e: Exception) {}
+            try {
+                db.execSQL("ALTER TABLE transactions ADD COLUMN accountBalance REAL")
+            } catch (e: Exception) {}
         }
     }
 
-    override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {}
-
-    // DAOs
     fun transactionDao(): TransactionDao = object : TransactionDao {
         override fun getAllTransactionsFlow(): Flow<List<TransactionEntity>> = _transactionsFlow.asStateFlow()
         override fun getDuplicateTransactionsFlow(): Flow<List<TransactionEntity>> = _duplicateTransactionsFlow.asStateFlow()
@@ -198,27 +175,6 @@ class AppDatabase private constructor(context: Context) : SQLiteOpenHelper(
                 }
             }
             return list
-        }
-
-        override suspend fun findRecentTransactions(startTime: Long, endTime: Long): List<TransactionEntity> {
-            val list = mutableListOf<TransactionEntity>()
-            val db = readableDatabase
-            db.rawQuery("SELECT * FROM transactions WHERE timestamp BETWEEN ? AND ?", arrayOf(startTime.toString(), endTime.toString())).use { cursor ->
-                while (cursor.moveToNext()) {
-                    list.add(cursorToTransaction(cursor))
-                }
-            }
-            return list
-        }
-
-        override suspend fun findByRefId(refId: String): TransactionEntity? {
-            val db = readableDatabase
-            db.rawQuery("SELECT * FROM transactions WHERE refId = ? LIMIT 1", arrayOf(refId)).use { cursor ->
-                if (cursor.moveToNext()) {
-                    return cursorToTransaction(cursor)
-                }
-            }
-            return null
         }
 
         override suspend fun insertTransaction(transaction: TransactionEntity): Long {
@@ -240,7 +196,7 @@ class AppDatabase private constructor(context: Context) : SQLiteOpenHelper(
                 put("duplicateOfId", transaction.duplicateOfId)
                 put("rawText", transaction.rawText)
             }
-            val id = db.insert("transactions", null, cv)
+            val id = db.insertWithOnConflict("transactions", null, cv, SQLiteDatabase.CONFLICT_REPLACE)
             refreshTransactions()
             return id
         }
@@ -278,6 +234,30 @@ class AppDatabase private constructor(context: Context) : SQLiteOpenHelper(
             val db = writableDatabase
             db.delete("transactions", "isDuplicate = 1", null)
             refreshTransactions()
+        }
+
+        override suspend fun findByRefId(refId: String): TransactionEntity? {
+            val db = readableDatabase
+            db.rawQuery("SELECT * FROM transactions WHERE refId = ? LIMIT 1", arrayOf(refId)).use { cursor ->
+                if (cursor.moveToNext()) {
+                    return cursorToTransaction(cursor)
+                }
+            }
+            return null
+        }
+
+        override suspend fun findRecentTransactions(startTime: Long, endTime: Long): List<TransactionEntity> {
+            val list = mutableListOf<TransactionEntity>()
+            val db = readableDatabase
+            db.rawQuery(
+                "SELECT * FROM transactions WHERE timestamp BETWEEN ? AND ?",
+                arrayOf(startTime.toString(), endTime.toString())
+            ).use { cursor ->
+                while (cursor.moveToNext()) {
+                    list.add(cursorToTransaction(cursor))
+                }
+            }
+            return list
         }
     }
 
@@ -344,7 +324,7 @@ class AppDatabase private constructor(context: Context) : SQLiteOpenHelper(
                     return BudgetEntity(
                         monthKey = cursor.getString(cursor.getColumnIndexOrThrow("monthKey")),
                         totalBudget = cursor.getDouble(cursor.getColumnIndexOrThrow("totalBudget")),
-                        currencySymbol = "₹",
+                        currencySymbol = "â‚¹",
                         warn75Sent = cursor.getInt(cursor.getColumnIndexOrThrow("warn75Sent")) == 1,
                         warn90Sent = cursor.getInt(cursor.getColumnIndexOrThrow("warn90Sent")) == 1,
                         warn100Sent = cursor.getInt(cursor.getColumnIndexOrThrow("warn100Sent")) == 1
@@ -355,17 +335,17 @@ class AppDatabase private constructor(context: Context) : SQLiteOpenHelper(
         }
 
         override suspend fun setMonthlyBudget(budget: BudgetEntity) {
-            val db = writableDatabase
             val cv = ContentValues().apply {
                 put("monthKey", budget.monthKey)
                 put("totalBudget", budget.totalBudget)
-                put("currencySymbol", "₹")
+                put("currencySymbol", "â‚¹")
                 put("warn75Sent", if (budget.warn75Sent) 1 else 0)
                 put("warn90Sent", if (budget.warn90Sent) 1 else 0)
                 put("warn100Sent", if (budget.warn100Sent) 1 else 0)
             }
+            val db = writableDatabase
             db.insertWithOnConflict("monthly_budget", null, cv, SQLiteDatabase.CONFLICT_REPLACE)
-            _monthlyBudgetsMap[budget.monthKey]?.value = budget
+            _monthlyBudgetsMap[budget.monthKey]?.value = budget.copy(currencySymbol = "â‚¹")
         }
 
         override fun getCategoryBudgetsFlow(monthKey: String): Flow<List<CategoryBudgetEntity>> {
@@ -394,7 +374,6 @@ class AppDatabase private constructor(context: Context) : SQLiteOpenHelper(
         }
 
         override suspend fun setCategoryBudget(budget: CategoryBudgetEntity) {
-            val db = writableDatabase
             val cv = ContentValues().apply {
                 put("monthKey", budget.monthKey)
                 put("categoryName", budget.categoryName)
@@ -403,8 +382,8 @@ class AppDatabase private constructor(context: Context) : SQLiteOpenHelper(
                 put("warn90Sent", if (budget.warn90Sent) 1 else 0)
                 put("warn100Sent", if (budget.warn100Sent) 1 else 0)
             }
+            val db = writableDatabase
             db.insertWithOnConflict("category_budgets", null, cv, SQLiteDatabase.CONFLICT_REPLACE)
-            _categoryBudgetsMap[budget.monthKey]?.value = getCategoryBudgetsSync(budget.monthKey)
         }
     }
 
@@ -426,9 +405,26 @@ class AppDatabase private constructor(context: Context) : SQLiteOpenHelper(
             return list
         }
 
+        override suspend fun insertRule(rule: MerchantRuleEntity) {
+            val cv = ContentValues().apply {
+                put("merchantPattern", rule.merchantPattern.uppercase())
+                put("categoryName", rule.categoryName)
+                put("userCreated", if (rule.userCreated) 1 else 0)
+            }
+            val db = writableDatabase
+            db.insertWithOnConflict("merchant_rules", null, cv, SQLiteDatabase.CONFLICT_REPLACE)
+            refreshMerchantRules()
+        }
+
+        override suspend fun deleteRule(rule: MerchantRuleEntity) {
+            val db = writableDatabase
+            db.delete("merchant_rules", "merchantPattern = ?", arrayOf(rule.merchantPattern.uppercase()))
+            refreshMerchantRules()
+        }
+
         override suspend fun findRuleForMerchant(merchant: String): MerchantRuleEntity? {
             val db = readableDatabase
-            db.rawQuery("SELECT * FROM merchant_rules WHERE merchantPattern = ? LIMIT 1", arrayOf(merchant.uppercase().trim())).use { cursor ->
+            db.rawQuery("SELECT * FROM merchant_rules WHERE merchantPattern = ? LIMIT 1", arrayOf(merchant.uppercase())).use { cursor ->
                 if (cursor.moveToNext()) {
                     return MerchantRuleEntity(
                         merchantPattern = cursor.getString(cursor.getColumnIndexOrThrow("merchantPattern")),
@@ -439,64 +435,47 @@ class AppDatabase private constructor(context: Context) : SQLiteOpenHelper(
             }
             return null
         }
-
-        override suspend fun insertRule(rule: MerchantRuleEntity) {
-            val db = writableDatabase
-            val cv = ContentValues().apply {
-                put("merchantPattern", rule.merchantPattern.uppercase().trim())
-                put("categoryName", rule.categoryName)
-                put("userCreated", if (rule.userCreated) 1 else 0)
-            }
-            db.insertWithOnConflict("merchant_rules", null, cv, SQLiteDatabase.CONFLICT_REPLACE)
-            refreshMerchantRules()
-        }
-
-        override suspend fun deleteRule(rule: MerchantRuleEntity) {
-            val db = writableDatabase
-            db.delete("merchant_rules", "merchantPattern = ?", arrayOf(rule.merchantPattern))
-            refreshMerchantRules()
-        }
     }
 
     fun recurringExpenseDao(): RecurringExpenseDao = object : RecurringExpenseDao {
         override fun getActiveRecurringFlow(): Flow<List<RecurringExpenseEntity>> = _recurringFlow.asStateFlow()
 
-        override suspend fun insertRecurring(expense: RecurringExpenseEntity): Long {
-            val db = writableDatabase
+        override suspend fun insertRecurring(recurring: RecurringExpenseEntity): Long {
             val cv = ContentValues().apply {
-                put("title", expense.title)
-                put("amount", expense.amount)
-                put("categoryName", expense.categoryName)
-                put("frequency", expense.frequency)
-                put("dayOfMonth", expense.dayOfMonth)
-                put("paymentMethod", expense.paymentMethod)
-                put("isAutoDeducted", if (expense.isAutoDeducted) 1 else 0)
-                put("isActive", if (expense.isActive) 1 else 0)
+                put("title", recurring.title)
+                put("amount", recurring.amount)
+                put("categoryName", recurring.categoryName)
+                put("frequency", recurring.frequency)
+                put("dayOfMonth", recurring.dayOfMonth)
+                put("paymentMethod", recurring.paymentMethod)
+                put("isAutoDeducted", if (recurring.isAutoDeducted) 1 else 0)
+                put("isActive", if (recurring.isActive) 1 else 0)
             }
-            val id = db.insert("recurring_expenses", null, cv)
+            val db = writableDatabase
+            val id = db.insertWithOnConflict("recurring_expenses", null, cv, SQLiteDatabase.CONFLICT_REPLACE)
             refreshRecurring()
             return id
         }
 
-        override suspend fun updateRecurring(expense: RecurringExpenseEntity) {
-            val db = writableDatabase
+        override suspend fun updateRecurring(recurring: RecurringExpenseEntity) {
             val cv = ContentValues().apply {
-                put("title", expense.title)
-                put("amount", expense.amount)
-                put("categoryName", expense.categoryName)
-                put("frequency", expense.frequency)
-                put("dayOfMonth", expense.dayOfMonth)
-                put("paymentMethod", expense.paymentMethod)
-                put("isAutoDeducted", if (expense.isAutoDeducted) 1 else 0)
-                put("isActive", if (expense.isActive) 1 else 0)
+                put("title", recurring.title)
+                put("amount", recurring.amount)
+                put("categoryName", recurring.categoryName)
+                put("frequency", recurring.frequency)
+                put("dayOfMonth", recurring.dayOfMonth)
+                put("paymentMethod", recurring.paymentMethod)
+                put("isAutoDeducted", if (recurring.isAutoDeducted) 1 else 0)
+                put("isActive", if (recurring.isActive) 1 else 0)
             }
-            db.update("recurring_expenses", cv, "id = ?", arrayOf(expense.id.toString()))
+            val db = writableDatabase
+            db.update("recurring_expenses", cv, "id = ?", arrayOf(recurring.id.toString()))
             refreshRecurring()
         }
 
-        override suspend fun deleteRecurring(expense: RecurringExpenseEntity) {
+        override suspend fun deleteRecurring(recurring: RecurringExpenseEntity) {
             val db = writableDatabase
-            db.delete("recurring_expenses", "id = ?", arrayOf(expense.id.toString()))
+            db.delete("recurring_expenses", "id = ?", arrayOf(recurring.id.toString()))
             refreshRecurring()
         }
     }
@@ -504,34 +483,11 @@ class AppDatabase private constructor(context: Context) : SQLiteOpenHelper(
     fun monthlySummaryDao(): MonthlySummaryDao = object : MonthlySummaryDao {
         override fun getSummaryFlow(monthKey: String): Flow<MonthlySummaryEntity?> {
             return _monthlySummariesMap.getOrPut(monthKey) {
-                MutableStateFlow(getSummarySync(monthKey))
+                MutableStateFlow(null)
             }.asStateFlow()
         }
 
-        private fun getSummarySync(monthKey: String): MonthlySummaryEntity? {
-            val db = readableDatabase
-            db.rawQuery("SELECT * FROM monthly_summaries WHERE monthKey = ? LIMIT 1", arrayOf(monthKey)).use { cursor ->
-                if (cursor.moveToNext()) {
-                    return MonthlySummaryEntity(
-                        monthKey = cursor.getString(cursor.getColumnIndexOrThrow("monthKey")),
-                        totalIncome = cursor.getDouble(cursor.getColumnIndexOrThrow("totalIncome")),
-                        totalExpense = cursor.getDouble(cursor.getColumnIndexOrThrow("totalExpense")),
-                        totalSavings = cursor.getDouble(cursor.getColumnIndexOrThrow("totalSavings")),
-                        highestCategory = cursor.getString(cursor.getColumnIndexOrThrow("highestCategory")),
-                        highestCategoryAmount = cursor.getDouble(cursor.getColumnIndexOrThrow("highestCategoryAmount")),
-                        highestTransactionMerchant = cursor.getString(cursor.getColumnIndexOrThrow("highestTransactionMerchant")),
-                        highestTransactionAmount = cursor.getDouble(cursor.getColumnIndexOrThrow("highestTransactionAmount")),
-                        averageDailySpending = cursor.getDouble(cursor.getColumnIndexOrThrow("averageDailySpending")),
-                        budgetUsagePercentage = cursor.getDouble(cursor.getColumnIndexOrThrow("budgetUsagePercentage")),
-                        generatedAt = cursor.getLong(cursor.getColumnIndexOrThrow("generatedAt"))
-                    )
-                }
-            }
-            return null
-        }
-
         override suspend fun insertSummary(summary: MonthlySummaryEntity) {
-            val db = writableDatabase
             val cv = ContentValues().apply {
                 put("monthKey", summary.monthKey)
                 put("totalIncome", summary.totalIncome)
@@ -545,6 +501,7 @@ class AppDatabase private constructor(context: Context) : SQLiteOpenHelper(
                 put("budgetUsagePercentage", summary.budgetUsagePercentage)
                 put("generatedAt", summary.generatedAt)
             }
+            val db = writableDatabase
             db.insertWithOnConflict("monthly_summaries", null, cv, SQLiteDatabase.CONFLICT_REPLACE)
             _monthlySummariesMap[summary.monthKey]?.value = summary
         }
@@ -641,6 +598,9 @@ class AppDatabase private constructor(context: Context) : SQLiteOpenHelper(
         @Volatile
         private var INSTANCE: AppDatabase? = null
 
+        const val DATABASE_NAME = "spendwise_db.db"
+        const val DATABASE_VERSION = 2
+
         fun getDatabase(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = AppDatabase(context.applicationContext)
@@ -650,24 +610,24 @@ class AppDatabase private constructor(context: Context) : SQLiteOpenHelper(
         }
 
         val DEFAULT_CATEGORIES = listOf(
-            CategoryEntity("Friends", "Ã°Å¸â€˜Â¥", true),
-            CategoryEntity("Groceries", "ÃƒÂ°Ã…Â¸Ã‚Â¥Ã‚Â¦", true),
-            CategoryEntity("Food", "ÃƒÂ°Ã…Â¸Ã‚ÂÃ¢â‚¬Â", true),
-            CategoryEntity("Recharge & Bills", "ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â±", true),
-            CategoryEntity("Shopping", "ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂºÃ¢â‚¬â„¢", true),
-            CategoryEntity("Transport", "ÃƒÂ°Ã…Â¸Ã…Â¡Ã…â€™", true),
-            CategoryEntity("Entertainment", "ÃƒÂ°Ã…Â¸Ã…Â½Ã‚Â¬", true),
-            CategoryEntity("Gaming", "ÃƒÂ°Ã…Â¸Ã…Â½Ã‚Â®", true),
-            CategoryEntity("Salary", "ÃƒÂ°Ã…Â¸Ã¢â‚¬â„¢Ã‚Â¼", true),
-            CategoryEntity("Income", "ÃƒÂ°Ã…Â¸Ã¢â‚¬â„¢Ã‚Âµ", true),
-            CategoryEntity("Education", "ÃƒÂ°Ã…Â¸Ã…Â½Ã¢â‚¬Å“", true),
-            CategoryEntity("Bills", "ÃƒÂ°Ã…Â¸Ã¢â‚¬â„¢Ã‚Â¡", true),
-            CategoryEntity("Subscriptions", "ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬Å¾", true),
-            CategoryEntity("Travel", "ÃƒÂ¢Ã…â€œÃ‹â€ ÃƒÂ¯Ã‚Â¸Ã‚Â", true),
-            CategoryEntity("Medical", "ÃƒÂ°Ã…Â¸Ã‚ÂÃ‚Â¥", true),
-            CategoryEntity("Technology", "ÃƒÂ°Ã…Â¸Ã¢â‚¬â„¢Ã‚Â»", true),
-            CategoryEntity("Home", "ÃƒÂ°Ã…Â¸Ã‚ÂÃ‚Â ", true),
-            CategoryEntity("Other", "ÃƒÂ°Ã…Â¸Ã¢â‚¬â„¢Ã‚Â°", true)
+            CategoryEntity("Friends", "ðŸ‘¥", true),
+            CategoryEntity("Groceries", "ðŸ›’", true),
+            CategoryEntity("Food", "ðŸ”", true),
+            CategoryEntity("Recharge & Bills", "ðŸ“±", true),
+            CategoryEntity("Shopping", "ðŸ›ï¸", true),
+            CategoryEntity("Transport", "ðŸš—", true),
+            CategoryEntity("Entertainment", "ðŸŽ¬", true),
+            CategoryEntity("Gaming", "ðŸŽ®", true),
+            CategoryEntity("Salary", "ðŸ’°", true),
+            CategoryEntity("Income", "ðŸ’µ", true),
+            CategoryEntity("Education", "ðŸŽ“", true),
+            CategoryEntity("Bills", "ðŸ“„", true),
+            CategoryEntity("Subscriptions", "ðŸ”", true),
+            CategoryEntity("Travel", "âœˆï¸", true),
+            CategoryEntity("Medical", "ðŸ’Š", true),
+            CategoryEntity("Technology", "ðŸ’»", true),
+            CategoryEntity("Home", "ðŸ ", true),
+            CategoryEntity("Other", "ðŸ·ï¸", true)
         )
     }
 }
