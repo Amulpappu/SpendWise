@@ -112,7 +112,7 @@ fun TransactionDetailDialog(
 
                 // Big Amount
                 Text(
-                    text = "${if (isIncome) "+" else "-"}$cleanCurrency${String.format(Locale.US, "%,.2f", transaction.amount)}",
+                    text = "${if (isIncome) "+" else ""}$cleanCurrency${String.format(Locale.US, "%,.2f", transaction.amount)}",
                     style = MaterialTheme.typography.headlineMedium.copy(
                         fontWeight = FontWeight.Black,
                         fontSize = 30.sp
@@ -120,20 +120,7 @@ fun TransactionDetailDialog(
                     color = amountColor
                 )
 
-                if (transaction.accountBalance != null) {
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Surface(
-                        shape = RoundedCornerShape(10.dp),
-                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
-                    ) {
-                        Text(
-                            text = "Running Balance: $cleanCurrency${String.format(Locale.US, "%,.2f", transaction.accountBalance)}",
-                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-                        )
-                    }
-                }
+
 
                 Spacer(modifier = Modifier.height(16.dp))
                 HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))

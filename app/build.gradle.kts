@@ -12,8 +12,8 @@ android {
         applicationId = "com.example.smartexpensetracker"
         minSdk = 24
         targetSdk = 36
-        versionCode = 4
-        versionName = "3.3"
+        versionCode = 5
+        versionName = "3.4"
     }
 
     signingConfigs {

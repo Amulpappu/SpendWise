@@ -22,8 +22,9 @@ object TransactionReceiptGenerator {
         val isIncome = transaction.isIncome
         val fullDateFormat = SimpleDateFormat("EEEE, dd MMM yyyy \u2022 hh:mm a", Locale.getDefault())
         val dateStr = fullDateFormat.format(Date(transaction.timestamp))
-        val sign = if (isIncome) "+" else "-"
         val formattedAmount = String.format(Locale.US, "%,.2f", transaction.amount)
+        // No minus sign: expenses show clean Rupee amount, income shows +Rupee
+        val amountText = if (isIncome) "+\u20B9$formattedAmount" else "\u20B9$formattedAmount"
 
         // 1. Outer Background
         val outerPaint = Paint().apply {
@@ -60,7 +61,7 @@ object TransactionReceiptGenerator {
         val pillWidth = 440f
         val pillHeight = 64f
         val pillX = (width - pillWidth) / 2f
-        val pillY = 120f
+        val pillY = 130f
         val pillRect = RectF(pillX, pillY, pillX + pillWidth, pillY + pillHeight)
 
         val pillBgPaint = Paint().apply {
@@ -91,69 +92,37 @@ object TransactionReceiptGenerator {
         // 4. Merchant / Payee Name
         val merchantPaint = Paint().apply {
             color = Color.parseColor("#FFFFFF")
-            textSize = if (transaction.merchant.length > 20) 42f else 50f
+            textSize = if (transaction.merchant.length > 20) 44f else 52f
             typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
             textAlign = Paint.Align.CENTER
             isAntiAlias = true
         }
-        canvas.drawText(transaction.merchant, width / 2f, 265f, merchantPaint)
+        canvas.drawText(transaction.merchant, width / 2f, 280f, merchantPaint)
 
-        // 5. Large Amount
+        // 5. Large Amount (No minus sign - clean Rupee amount)
         val amountPaint = Paint().apply {
             color = if (isIncome) Color.parseColor("#10B981") else Color.parseColor("#F8FAFC")
-            textSize = 72f
+            textSize = 76f
             typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
             textAlign = Paint.Align.CENTER
             isAntiAlias = true
         }
-        canvas.drawText("$sign\u20B9$formattedAmount", width / 2f, 365f, amountPaint)
+        canvas.drawText(amountText, width / 2f, 390f, amountPaint)
 
         // 6. Date & Time
         val datePaint = Paint().apply {
             color = Color.parseColor("#94A3B8")
-            textSize = 28f
+            textSize = 30f
             typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
             textAlign = Paint.Align.CENTER
             isAntiAlias = true
         }
-        canvas.drawText(dateStr, width / 2f, 430f, datePaint)
+        canvas.drawText(dateStr, width / 2f, 460f, datePaint)
 
-        // 7. Running Balance (if available)
-        var nextY = 500f
-        if (transaction.accountBalance != null) {
-            val balPillWidth = 480f
-            val balPillHeight = 52f
-            val balPillX = (width - balPillWidth) / 2f
-            val balPillRect = RectF(balPillX, 470f, balPillX + balPillWidth, 470f + balPillHeight)
+        // Note: Running balance is intentionally omitted for single transaction receipts
+        // to protect user privacy (only multiple transactions statement export displays balance).
 
-            val balBgPaint = Paint().apply {
-                color = Color.parseColor("#0C2338")
-                style = Paint.Style.FILL
-                isAntiAlias = true
-            }
-            canvas.drawRoundRect(balPillRect, 26f, 26f, balBgPaint)
-
-            val balBorderPaint = Paint().apply {
-                color = Color.parseColor("#0284C7")
-                style = Paint.Style.STROKE
-                strokeWidth = 1.5f
-                isAntiAlias = true
-            }
-            canvas.drawRoundRect(balPillRect, 26f, 26f, balBorderPaint)
-
-            val balTextPaint = Paint().apply {
-                color = Color.parseColor("#38BDF8")
-                textSize = 26f
-                typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-                textAlign = Paint.Align.CENTER
-                isAntiAlias = true
-            }
-            val balFormatted = String.format(Locale.US, "%,.2f", transaction.accountBalance)
-            canvas.drawText("Running Balance: \u20B9$balFormatted", width / 2f, 506f, balTextPaint)
-            nextY = 560f
-        }
-
-        // 8. Divider 1 (Dashed Line)
+        // 7. Divider 1 (Dashed Line)
         val dashedPaint = Paint().apply {
             color = Color.parseColor("#334155")
             style = Paint.Style.STROKE
@@ -161,12 +130,12 @@ object TransactionReceiptGenerator {
             pathEffect = DashPathEffect(floatArrayOf(16f, 12f), 0f)
             isAntiAlias = true
         }
-        val dividerY1 = nextY + 30f
+        val dividerY1 = 525f
         canvas.drawLine(cardLeft + 36f, dividerY1, cardRight - 36f, dividerY1, dashedPaint)
 
-        // 9. Key-Value Transaction Details Rows
-        val rowStartY = dividerY1 + 65f
-        val rowSpacing = 82f
+        // 8. Key-Value Transaction Details Rows
+        val rowStartY = 600f
+        val rowSpacing = 85f
         val labelX = cardLeft + 50f
         val valueX = cardRight - 50f
 
@@ -218,8 +187,8 @@ object TransactionReceiptGenerator {
             currentY += rowSpacing
         }
 
-        // 10. Ticket Cutout & Divider 2
-        val cutoutY = 1110f
+        // 9. Ticket Cutout & Divider 2
+        val cutoutY = 1060f
         val cutoutRadius = 32f
 
         // Cutouts on left & right edge
@@ -239,7 +208,7 @@ object TransactionReceiptGenerator {
         // Dashed line between cutouts
         canvas.drawLine(cardLeft + cutoutRadius + 12f, cutoutY, cardRight - cutoutRadius - 12f, cutoutY, dashedPaint)
 
-        // 11. Footer Branding
+        // 10. Footer Branding
         val footerStatusPaint = Paint().apply {
             color = Color.parseColor("#10B981")
             textSize = 28f
@@ -247,7 +216,7 @@ object TransactionReceiptGenerator {
             textAlign = Paint.Align.CENTER
             isAntiAlias = true
         }
-        canvas.drawText("\u2713 100% Verified Digital Receipt", width / 2f, 1205f, footerStatusPaint)
+        canvas.drawText("\u2713 100% Verified Digital Receipt", width / 2f, 1155f, footerStatusPaint)
 
         val footerBrandPaint = Paint().apply {
             color = Color.parseColor("#64748B")
@@ -256,7 +225,7 @@ object TransactionReceiptGenerator {
             textAlign = Paint.Align.CENTER
             isAntiAlias = true
         }
-        canvas.drawText("SpendWise \u2022 Personal Expense Tracker", width / 2f, 1255f, footerBrandPaint)
+        canvas.drawText("SpendWise \u2022 Personal Expense Tracker", width / 2f, 1205f, footerBrandPaint)
 
         val footerSecPaint = Paint().apply {
             color = Color.parseColor("#475569")
@@ -265,7 +234,7 @@ object TransactionReceiptGenerator {
             textAlign = Paint.Align.CENTER
             isAntiAlias = true
         }
-        canvas.drawText("Generated locally on device \u2022 100% Offline & Secure", width / 2f, 1295f, footerSecPaint)
+        canvas.drawText("Generated locally on device \u2022 100% Offline & Secure", width / 2f, 1245f, footerSecPaint)
 
         return bitmap
     }
@@ -286,7 +255,8 @@ object TransactionReceiptGenerator {
                 receiptFile
             )
 
-            val sign = if (transaction.isIncome) "+" else "-"
+            // No minus sign: clean formatted Rupee
+            val sign = if (transaction.isIncome) "+" else ""
             val formattedAmount = String.format(Locale.US, "%,.2f", transaction.amount)
             val actionText = if (transaction.isIncome) "Received" else "Paid"
             val prepText = if (transaction.isIncome) "from" else "to"
