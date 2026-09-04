@@ -36,8 +36,6 @@ fun HelpSupportScreen(
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
-    var isCheckingSync by remember { mutableStateOf(false) }
-    var syncTestResult by remember { mutableStateOf<String?>(null) }
 
     Scaffold(
         topBar = {
@@ -137,70 +135,7 @@ fun HelpSupportScreen(
                 }
             }
 
-            // Diagnostic 2: Google Sheets Webhook Test
-            Card(
-                shape = RoundedCornerShape(14.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                            Icon(Icons.Default.CloudSync, contentDescription = null, tint = PrimaryEmerald)
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Column {
-                                Text("Google Sheets Live Sync", fontWeight = FontWeight.SemiBold)
-                                Text("Ping script deployment endpoint", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
-                            }
-                        }
-                        Button(
-                            onClick = {
-                                coroutineScope.launch {
-                                    isCheckingSync = true
-                                    syncTestResult = null
-                                    val profile = com.example.smartexpensetracker.data.local.UserProfileManager.getUserProfile(context)
-                                    val dummy = com.example.smartexpensetracker.data.local.entity.TransactionEntity(
-                                        id = 0,
-                                        amount = 0.0,
-                                        isIncome = false,
-                                        merchant = "SpendWise Health Ping",
-                                        category = "Diagnostics",
-                                        timestamp = System.currentTimeMillis(),
-                                        paymentMethod = "System",
-                                        source = "Manual",
-                                        note = "Live Diagnostic Health Check"
-                                    )
-                                    val success = com.example.smartexpensetracker.data.export.GoogleSheetsSyncManager.syncTransactionToSheet(context, dummy)
-                                    isCheckingSync = false
-                                    syncTestResult = if (success) "Connected successfully! Live tab: ${profile.userName} (${profile.mobileNumber.takeLast(4)})" else "Failed to connect. Verify 'Anyone' access in Apps Script deployment."
-                                    Toast.makeText(context, syncTestResult, Toast.LENGTH_LONG).show()
-                                }
-                            },
-                            enabled = !isCheckingSync,
-                            colors = ButtonDefaults.buttonColors(containerColor = PrimaryEmerald),
-                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
-                        ) {
-                            Text(if (isCheckingSync) "Testing..." else "Test Ping", fontSize = 12.sp, color = MaterialTheme.colorScheme.surface)
-                        }
-                    }
-
-                    if (syncTestResult != null) {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = syncTestResult!!,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = if (syncTestResult!!.startsWith("Connected")) SuccessGreen else MaterialTheme.colorScheme.error,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    }
-                }
-            }
-
-            // 3. Frequently Asked Questions (FAQs)
+            // 2. Frequently Asked Questions (FAQs)
             Text("Frequently Asked Questions", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
 
             FaqAccordion(
@@ -214,13 +149,13 @@ fun HelpSupportScreen(
             )
 
             FaqAccordion(
-                question = "Why does Google Sheets show 'Sync Failed'?",
-                answer = "Google Apps Script requires 'Who has access' to be set to 'Anyone'. Open your spreadsheet -> Extensions -> Apps Script -> Deploy -> Manage Deployments -> Edit -> Set 'Who has access' to 'Anyone' -> Deploy."
+                question = "Is my financial data private and offline?",
+                answer = "Yes! SpendWise is designed strictly for your personal use. All banking data, transactions, and budgets are stored 100% locally on your phone in SQLite. Zero cloud tracking, no third-party servers."
             )
 
             FaqAccordion(
-                question = "How do multiple users share the same spreadsheet?",
-                answer = "Each user's phone automatically creates their own dedicated personal ledger tab (e.g. 'Lohith (2741)' or 'Naveen (4561)') while also registering in the centralized '_App_Users' directory."
+                question = "How do I backup and restore my transactions?",
+                answer = "Go to Settings -> Backup & Restore to export your entire database as a secure JSON backup file anytime."
             )
 
             Spacer(modifier = Modifier.height(24.dp))

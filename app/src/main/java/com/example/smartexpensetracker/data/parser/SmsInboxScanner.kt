@@ -5,7 +5,6 @@ import android.database.Cursor
 import android.net.Uri
 import android.provider.Telephony
 import android.util.Log
-import com.example.smartexpensetracker.data.export.GoogleSheetsSyncManager
 import com.example.smartexpensetracker.data.local.AppDatabase
 import com.example.smartexpensetracker.data.repository.ExpenseRepositoryImpl
 import kotlinx.coroutines.Dispatchers
@@ -34,11 +33,6 @@ object SmsInboxScanner {
         // Rescan strictly authorized bank senders with expanded depth
         val count = scanInbox(context, maxMessages = 3000)
 
-        // Bulk sync all scanned transactions to Google Sheets immediately
-        val allTxns = repository.getAllTransactionsSync()
-        if (allTxns.isNotEmpty()) {
-            GoogleSheetsSyncManager.syncAllTransactionsToSheet(context.applicationContext, allTxns)
-        }
 
         count
     }
@@ -89,12 +83,7 @@ object SmsInboxScanner {
                     }
                 }
 
-                // Immediately bulk sync all transactions to Google Sheets in a single fast batch
-                val allTxns = repository.getAllTransactionsSync()
-                Log.d("SmsInboxScanner", "Total transactions in DB after scan: ${allTxns.size}")
-                if (allTxns.isNotEmpty()) {
-                    GoogleSheetsSyncManager.syncAllTransactionsToSheet(context.applicationContext, allTxns)
-                }
+
             }
         } catch (e: Exception) {
             e.printStackTrace()

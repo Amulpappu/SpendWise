@@ -387,19 +387,7 @@ fun ReportsScreen(viewModel: MainViewModel) {
                     Text(if (isGeneratingExcel) "Generating Excel..." else "Export Excel (.csv) Statement")
                 }
 
-                OutlinedButton(
-                    onClick = {
-                        viewModel.syncAllToGoogleSheets { count ->
-                        Toast.makeText(context, "\u2705 Synced $count transaction(s) to Google Sheet!", Toast.LENGTH_LONG).show()
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Icon(Icons.Default.CloudUpload, contentDescription = null)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Sync Live Statement to Google Sheets")
-                }
+                
             }
         }
 

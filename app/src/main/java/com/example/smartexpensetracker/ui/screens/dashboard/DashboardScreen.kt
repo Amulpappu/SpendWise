@@ -63,7 +63,6 @@ fun DashboardScreen(
     var searchQuery by remember { mutableStateOf("") }
     var selectedFilter by remember { mutableStateOf("All") } // "All", "Expense", "Income"
     var showBalance by remember { mutableStateOf(true) }
-    var isSyncingSheet by remember { mutableStateOf(false) }
     var selectedTxnForDetails by remember { mutableStateOf<TransactionEntity?>(null) }
     var txnToEdit by remember { mutableStateOf<TransactionEntity?>(null) }
 
@@ -223,19 +222,12 @@ fun DashboardScreen(
                         onClick = onNavigateToTransactions
                     )
 
-                    // Service 2: Google Sheets Live Sync
+                    // Service 2: Add Expense
                     QuickServiceTile(
-                        icon = if (isSyncingSheet) Icons.Default.HourglassTop else Icons.Default.CloudSync,
-                        label = if (isSyncingSheet) "Syncing..." else "Sheet Sync",
+                        icon = Icons.Default.AddCircle,
+                        label = "Add Expense",
                         color = PrimaryEmerald,
-                        onClick = {
-                            coroutineScope.launch {
-                                isSyncingSheet = true
-                                val synced = com.example.smartexpensetracker.data.export.GoogleSheetsSyncManager.syncAllTransactionsToSheet(context, allTransactions)
-                                isSyncingSheet = false
-                                Toast.makeText(context, "Synced $synced transactions to Google Sheet!", Toast.LENGTH_SHORT).show()
-                            }
-                        }
+                        onClick = onAddTransactionClick
                     )
 
                     // Service 3: Bank Statements

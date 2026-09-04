@@ -38,12 +38,7 @@ fun SettingsScreen(
     var testSmsText by remember { mutableStateOf("Your A/C XXXXX5779 has been debited by Rs.250.00 to SWIGGY. Avail Bal: Rs 12,300.00") }
     var backupJsonInput by remember { mutableStateOf("") }
     var showBackupRestoreDialog by remember { mutableStateOf(false) }
-    var showScriptDialog by remember { mutableStateOf(false) }
 
-    val webhookUrl by viewModel.webhookUrl.collectAsState()
-    val autoSyncEnabled by viewModel.autoSyncEnabled.collectAsState()
-    var webhookInput by remember { mutableStateOf(webhookUrl) }
-    var isTestingSync by remember { mutableStateOf(false) }
 
     val userProfile by viewModel.userProfile.collectAsState()
 
@@ -128,90 +123,34 @@ fun SettingsScreen(
             }
         }
 
-        // 2. Google Sheets Live Sync Card
+        // 2. Personal Offline Storage & Privacy Card
         Card(
             shape = RoundedCornerShape(20.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
             modifier = Modifier.fillMaxWidth()
         ) {
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.CloudUpload, contentDescription = null, tint = PrimaryEmerald)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Google Sheets Live Sync", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
-                    }
-                    Switch(
-                        checked = autoSyncEnabled,
-                        onCheckedChange = { viewModel.updateAutoSync(it) }
-                    )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Security, contentDescription = null, tint = PrimaryEmerald)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("100% Private & Offline", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
                 }
 
                 Text(
-                    text = "Automatically appends debits/credits to your Google Sheet in real-time over 4G/5G mobile internet (works outside home without laptop!):",
-                    style = MaterialTheme.typography.bodyMedium
-                )
-
-                OutlinedTextField(
-                    value = webhookInput,
-                    onValueChange = {
-                        webhookInput = it
-                        viewModel.updateWebhookUrl(it)
-                    },
-                    label = { Text("Google Apps Script Webhook URL") },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    singleLine = true
+                    text = "SpendWise is designed strictly for your personal use. All financial data, transactions, and budgets are stored 100% locally on your phone in SQLite. Zero third-party cloud servers, no Google Sheets tracking, and 100% offline privacy.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
                 )
 
                 Button(
-                    onClick = {
-                        isTestingSync = true
-                        coroutineScope.launch {
-                            val success = viewModel.testGoogleSheetsSync()
-                            isTestingSync = false
-                            if (success) {
-                                Toast.makeText(context, "✅ Google Sheet synced successfully!", Toast.LENGTH_LONG).show()
-                            } else {
-                                Toast.makeText(context, "❌ Sync failed. Check Webhook URL and permissions.", Toast.LENGTH_LONG).show()
-                            }
-                        }
-                    },
-                    enabled = !isTestingSync,
-                    modifier = Modifier.fillMaxWidth()
+                    onClick = { showBackupRestoreDialog = true },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryEmerald)
                 ) {
-                    Icon(Icons.Default.Sync, contentDescription = null)
+                    Icon(Icons.Default.Backup, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text(if (isTestingSync) "Testing Sync..." else "Test Google Sheets Connection")
-                }
-
-                OutlinedButton(
-                    onClick = {
-                        isTestingSync = true
-                        viewModel.syncAllToGoogleSheets { count ->
-                            isTestingSync = false
-                            Toast.makeText(context, "✅ Synced $count transaction(s) to Google Sheet!", Toast.LENGTH_LONG).show()
-                        }
-                    },
-                    enabled = !isTestingSync,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(Icons.Default.CloudUpload, contentDescription = null)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Sync All Transactions to Google Sheets Now")
-                }
-
-                TextButton(
-                    onClick = { showScriptDialog = true },
-                    modifier = Modifier.align(Alignment.CenterHorizontally)
-                ) {
-                    Icon(Icons.Default.Build, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text("Apps Script Setup Instructions (Fix 403 / Failed)", style = MaterialTheme.typography.bodySmall)
+                    Text("Backup & Restore Data (JSON)")
                 }
             }
         }
@@ -259,7 +198,7 @@ fun SettingsScreen(
                     Text("Scan Bank SMS Inbox", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
                 }
                 Text(
-                    text = "Import and sync any bank or UPI SMS from your phone inbox to SpendWise and Google Sheets.",
+                    text = "Import and parse bank or UPI SMS from your phone inbox directly into SpendWise.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                 )
@@ -303,7 +242,7 @@ fun SettingsScreen(
                     Text("Import / Paste Bank SMS / RCS Message", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
                 }
                 Text(
-                    text = "Paste any bank SMS, RCS text, or UPI notification here to instantly parse, categorize, and log it to your account & Google Sheet:",
+                    text = "Paste any bank SMS, RCS text, or UPI notification here to instantly parse, categorize, and log it to your account:",
                     style = MaterialTheme.typography.bodyMedium
                 )
 
@@ -413,107 +352,6 @@ fun SettingsScreen(
             dismissButton = {
                 TextButton(onClick = { showBackupRestoreDialog = false }) {
                     Text("Close")
-                }
-            }
-        )
-    }
-
-    if (showScriptDialog) {
-        AlertDialog(
-            onDismissRequest = { showScriptDialog = false },
-            title = { Text("Google Apps Script Setup", fontWeight = FontWeight.Bold) },
-            text = {
-                Column(
-                    modifier = Modifier.verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Text("If sync shows 'Sync Failed' (403 Forbidden), your Google Script deployment needs 1 permission update:", fontWeight = FontWeight.SemiBold)
-                    Text("1. Open your Google Sheet → Extensions → Apps Script.\n2. Click 'Deploy' (top right) → 'Manage deployments' (or 'New deployment').\n3. Click Edit (pencil icon).\n4. Set 'Execute as': 'Me'\n5. Set 'Who has access': 'Anyone' ⚠️ (Required so your phone can sync).\n6. Click Deploy and copy the Web App URL.")
-                    Text("Make sure your Google Apps Script contains this Ultra-Fast Bulk & Single Sync code:", fontWeight = FontWeight.SemiBold)
-                    Card(
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-                        shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(
-                            text = """function doPost(e) {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var data = JSON.parse(e.postData.contents);
-  var nowStr = Utilities.formatDate(new Date(), Session.getScriptTimeZone() || "GMT+5:30", "yyyy-MM-dd HH:mm:ss");
-  
-  var userName = (data.user && data.user.name) ? data.user.name : "User";
-  var userPhone = (data.user && data.user.phone) ? data.user.phone : "6379982741";
-  var userBank = (data.user && data.user.bank) ? data.user.bank : "Primary Bank";
-  var userAcc = (data.user && data.user.account) ? data.user.account : "N/A";
-  var sheetName = userName + " (" + userPhone.slice(-4) + ")";
-  var bankAcc = userBank + " - " + userAcc;
-  
-  // 1. GET OR CREATE USER DEDICATED TAB
-  var sheet = ss.getSheetByName(sheetName);
-  if (!sheet) {
-    sheet = ss.insertSheet(sheetName);
-    sheet.appendRow(["ID", "Date & Time", "Type", "Amount (\u20B9)", "Category", "Merchant / Payee", "Bank / Account", "Payment Method", "Note"]);
-    sheet.getRange("A1:I1").setBackground("#0F2027").setFontColor("#FFFFFF").setFontWeight("bold");
-    sheet.setFrozenRows(1);
-  }
-  
-  // 2. BULK BATCH OR SINGLE TRANSACTION LOGGING (Exact Historical Dates)
-  if (data.batch && Array.isArray(data.batch) && data.batch.length > 0) {
-    var rows = data.batch.map(function(txn) {
-      return [
-        txn.id || "",
-        txn.timestamp || nowStr,
-        txn.type || "Expense",
-        txn.amount || 0,
-        txn.category || "General",
-        txn.merchant || "Self",
-        bankAcc,
-        txn.paymentMethod || "UPI",
-        txn.note || ""
-      ];
-    });
-    var startRow = sheet.getLastRow() + 1;
-    sheet.getRange(startRow, 1, rows.length, 9).setValues(rows);
-  } else {
-    var txn = data.transaction || data;
-    sheet.appendRow([
-      txn.id || "",
-      txn.timestamp || nowStr,
-      txn.type || "Expense",
-      txn.amount || 0,
-      txn.category || "General",
-      txn.merchant || "Self",
-      bankAcc,
-      txn.paymentMethod || "UPI",
-      txn.note || ""
-    ]);
-  }
-  
-  // 3. MASTER DIRECTORY TAB INITIALIZER
-  var masterSheet = ss.getSheetByName("_App_Users");
-  if (!masterSheet) {
-    masterSheet = ss.insertSheet("_App_Users", 0);
-    masterSheet.appendRow(["User Mobile (Key)", "User Full Name", "Bank Name", "Primary Account No.", "Dedicated Tab", "Last Active Timestamp"]);
-    masterSheet.getRange("A1:F1").setBackground("#1B3B6F").setFontColor("#FFFFFF").setFontWeight("bold");
-    masterSheet.setFrozenRows(1);
-    masterSheet.appendRow([userPhone, userName, userBank, userAcc, sheetName, nowStr]);
-  }
-  
-  return ContentService.createTextOutput(JSON.stringify({
-    status: "success", 
-    sheet: sheetName, 
-    user: userName
-  })).setMimeType(ContentService.MimeType.JSON);
-}""",
-                            style = MaterialTheme.typography.bodySmall,
-                            modifier = Modifier.padding(8.dp)
-                        )
-                    }
-                }
-            },
-            confirmButton = {
-                Button(onClick = { showScriptDialog = false }) {
-                    Text("Got It")
                 }
             }
         )

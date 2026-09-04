@@ -5,7 +5,6 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.smartexpensetracker.data.export.BackupManager
 import com.example.smartexpensetracker.data.export.DataExporter
-import com.example.smartexpensetracker.data.export.GoogleSheetsSyncManager
 import com.example.smartexpensetracker.data.local.AppDatabase
 import com.example.smartexpensetracker.data.local.entity.*
 import com.example.smartexpensetracker.data.repository.ExpenseRepository
@@ -59,9 +58,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val selectedStartDateMillis = MutableStateFlow<Long?>(null)
     val selectedEndDateMillis = MutableStateFlow<Long?>(null)
 
-    // Google Sheets state
-    val webhookUrl = MutableStateFlow(GoogleSheetsSyncManager.getWebhookUrl(application))
-    val autoSyncEnabled = MutableStateFlow(GoogleSheetsSyncManager.isAutoSyncEnabled(application))
+
 
     // User Profile & Authentication state
     val userProfile = MutableStateFlow(com.example.smartexpensetracker.data.local.UserProfileManager.getUserProfile(application))
@@ -245,9 +242,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 note = note
             )
             val id = repository.insertTransaction(entity)
-            if (autoSyncEnabled.value) {
-                GoogleSheetsSyncManager.syncTransactionToSheet(getApplication(), entity.copy(id = id))
-            }
+
         }
     }
 
@@ -272,10 +267,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun simulateIncomingText(text: String) {
         viewModelScope.launch {
-            val entity = repository.processIncomingText(text, source = "Simulated Test")
-            if (entity != null && !entity.isDuplicate && autoSyncEnabled.value) {
-                GoogleSheetsSyncManager.syncTransactionToSheet(getApplication(), entity)
-            }
+            repository.processIncomingText(text, source = "Simulated Test")
         }
     }
 
@@ -328,37 +320,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun updateWebhookUrl(url: String) {
-        GoogleSheetsSyncManager.saveWebhookUrl(getApplication(), url)
-        webhookUrl.value = url
-    }
 
-    fun updateAutoSync(enabled: Boolean) {
-        GoogleSheetsSyncManager.setAutoSyncEnabled(getApplication(), enabled)
-        autoSyncEnabled.value = enabled
-    }
-
-    fun testGoogleSheetsSync(): Boolean {
-        val testEntity = TransactionEntity(
-            amount = 250.0,
-            isIncome = false,
-            merchant = "SWIGGY",
-            category = "Food",
-            paymentMethod = "UPI",
-            source = "Manual Test",
-            note = "Smart Expense Tracker Initial Test"
-        )
-        return kotlinx.coroutines.runBlocking {
-            GoogleSheetsSyncManager.syncTransactionToSheet(getApplication(), testEntity)
-        }
-    }
-
-    fun syncAllToGoogleSheets(onComplete: (Int) -> Unit = {}) {
-        viewModelScope.launch {
-            val count = GoogleSheetsSyncManager.syncAllTransactionsToSheet(getApplication(), allTransactions.value)
-            onComplete(count)
-        }
-    }
 
     fun scanSmsInbox(onComplete: (Int) -> Unit = {}) {
         viewModelScope.launch {

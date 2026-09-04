@@ -8,7 +8,6 @@ import android.os.Bundle
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.telephony.SmsMessage
-import com.example.smartexpensetracker.data.export.GoogleSheetsSyncManager
 import com.example.smartexpensetracker.data.local.AppDatabase
 import com.example.smartexpensetracker.data.repository.ExpenseRepositoryImpl
 import kotlinx.coroutines.CoroutineScope
@@ -69,10 +68,6 @@ class TransactionNotificationListener : NotificationListenerService() {
                     merchant = entity.merchant,
                     isIncome = entity.isIncome
                 )
-                // Auto-sync to Google Sheet if enabled
-                if (GoogleSheetsSyncManager.isAutoSyncEnabled(applicationContext)) {
-                    GoogleSheetsSyncManager.syncTransactionToSheet(applicationContext, entity)
-                }
             }
         }
     }
@@ -116,9 +111,6 @@ class SmsReceiver : BroadcastReceiver() {
                                 isIncome = entity.isIncome
                             )
                             // Auto-sync to Google Sheet if enabled
-                            if (GoogleSheetsSyncManager.isAutoSyncEnabled(context.applicationContext)) {
-                                GoogleSheetsSyncManager.syncTransactionToSheet(context.applicationContext, entity)
-                            }
                         }
                     }
                 }
