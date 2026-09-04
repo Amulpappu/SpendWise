@@ -32,18 +32,21 @@ import java.util.*
 @Composable
 fun TransactionDetailDialog(
     transaction: TransactionEntity,
-    categoryEmoji: String = "🏷️",
+    categoryEmoji: String = "\uD83C\uDFF7\uFE0F",
     currencySymbol: String = "\u20B9",
     onDismiss: () -> Unit,
     onEdit: (TransactionEntity) -> Unit,
     onDelete: (TransactionEntity) -> Unit
 ) {
     val context = LocalContext.current
-    val cleanCurrency = if (currencySymbol.contains("Ã") || currencySymbol.contains("") || currencySymbol.isBlank()) "\u20B9" else currencySymbol
-    val fullDateFormat = remember { SimpleDateFormat("EEEE, dd MMM yyyy • hh:mm a", Locale.getDefault()) }
+    val cleanCurrency = if (currencySymbol.contains("?") || currencySymbol.contains("?") || currencySymbol.isBlank()) "\u20B9" else currencySymbol
+    val fullDateFormat = remember { SimpleDateFormat("EEEE, dd MMM yyyy \u2022 hh:mm a", Locale.getDefault()) }
     val fullDateStr = remember(transaction.timestamp) { fullDateFormat.format(Date(transaction.timestamp)) }
     val isIncome = transaction.isIncome
     val amountColor = if (isIncome) SuccessGreen else MaterialTheme.colorScheme.onSurface
+    val safeEmoji = if (categoryEmoji.contains("?") || categoryEmoji.contains("?") || categoryEmoji.contains("?") || categoryEmoji.isBlank() || categoryEmoji.length > 4) {
+        com.example.smartexpensetracker.data.local.entity.getCategoryEmoji(transaction.category)
+    } else categoryEmoji
 
     Dialog(onDismissRequest = onDismiss) {
         Card(
@@ -90,7 +93,7 @@ fun TransactionDetailDialog(
                 // Big Logo / Avatar
                 MerchantLogo(
                     merchant = transaction.merchant,
-                    categoryEmoji = categoryEmoji,
+                    categoryEmoji = safeEmoji,
                     isIncome = isIncome,
                     size = 60.dp
                 )

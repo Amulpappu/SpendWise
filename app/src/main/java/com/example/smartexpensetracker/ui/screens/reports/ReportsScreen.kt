@@ -148,7 +148,7 @@ fun ReportsScreen(viewModel: MainViewModel) {
                     Spacer(modifier = Modifier.width(10.dp))
                     Column {
                         Text("Official Bank & UPI Statement", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                        Text("PDF â€¢ Excel â€¢ Password Protected", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f))
+                    Text("PDF \u2022 Excel \u2022 Password Protected", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f))
                     }
                 }
 
@@ -172,7 +172,7 @@ fun ReportsScreen(viewModel: MainViewModel) {
                             mobileNumber = detected.mobileNumber
                             accountNumber = detected.accountNumber
                             bankName = detected.bankName
-                            Toast.makeText(context, "âš¡ Auto-detected: ${detected.bankName} (${detected.accountNumber})", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, "\u26A1 Auto-detected: ${detected.bankName} (${detected.accountNumber})", Toast.LENGTH_SHORT).show()
                         },
                         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
                     ) {
@@ -390,7 +390,7 @@ fun ReportsScreen(viewModel: MainViewModel) {
                 OutlinedButton(
                     onClick = {
                         viewModel.syncAllToGoogleSheets { count ->
-                            Toast.makeText(context, "âœ… Synced $count transaction(s) to Google Sheet!", Toast.LENGTH_LONG).show()
+                        Toast.makeText(context, "\u2705 Synced $count transaction(s) to Google Sheet!", Toast.LENGTH_LONG).show()
                         }
                     },
                     modifier = Modifier.fillMaxWidth(),

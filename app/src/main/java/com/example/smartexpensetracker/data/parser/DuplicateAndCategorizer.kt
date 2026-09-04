@@ -21,16 +21,24 @@ class DuplicateDetector(private val transactionDao: TransactionDao) {
             }
         }
 
-        // 2. Exact carrier duplicate match: only within 2 minutes window with same amount and exact raw text / merchant
-        val windowMs = 2 * 60 * 1000L // 2 minutes carrier duplication window
+        // 2. Duplicate window match: 10 minutes window with same amount and direction
+        val windowMs = 10 * 60 * 1000L
         val minTime = parsed.timestamp - windowMs
         val maxTime = parsed.timestamp + windowMs
 
         val recents = transactionDao.findRecentTransactions(minTime, maxTime)
         val exactDuplicate = recents.firstOrNull {
-            it.amount == parsed.amount &&
-            it.isIncome == parsed.isIncome &&
-            (it.rawText == parsed.rawSanitizedText || it.merchant.equals(parsed.merchant, ignoreCase = true))
+            if (it.amount != parsed.amount || it.isIncome != parsed.isIncome) return@firstOrNull false
+
+            val sameMerchant = it.merchant.equals(parsed.merchant, ignoreCase = true)
+            val genericMatch = it.merchant.contains("Bank", ignoreCase = true) || parsed.merchant.contains("Bank", ignoreCase = true)
+            val rawMatch = it.rawText == parsed.rawSanitizedText ||
+                    it.rawText.contains(parsed.merchant, ignoreCase = true) ||
+                    parsed.rawSanitizedText.contains(it.merchant, ignoreCase = true)
+            val balMatch = it.accountBalance != null && parsed.availableBalance != null &&
+                    Math.abs(it.accountBalance - parsed.availableBalance) < 0.01
+
+            sameMerchant || genericMatch || rawMatch || balMatch
         }
 
         if (exactDuplicate != null) {

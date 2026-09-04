@@ -24,18 +24,21 @@ import java.util.*
 @Composable
 fun TransactionItem(
     transaction: TransactionEntity,
-    categoryEmoji: String = "🏷️",
+    categoryEmoji: String = "\uD83C\uDFF7\uFE0F",
     currencySymbol: String = "\u20B9",
     onClick: (TransactionEntity) -> Unit = {},
     onEdit: (TransactionEntity) -> Unit = {},
     onDelete: (TransactionEntity) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    val cleanCurrency = if (currencySymbol.contains("Ã") || currencySymbol.contains("") || currencySymbol.isBlank()) "\u20B9" else currencySymbol
+    val cleanCurrency = if (currencySymbol.contains("?") || currencySymbol.contains("?") || currencySymbol.isBlank()) "\u20B9" else currencySymbol
     val dateFormat = remember { SimpleDateFormat("dd MMM, hh:mm a", Locale.getDefault()) }
     val dateStr = remember(transaction.timestamp) { dateFormat.format(Date(transaction.timestamp)) }
     val isIncome = transaction.isIncome
     val amountColor = if (isIncome) SuccessGreen else MaterialTheme.colorScheme.onSurface
+    val safeEmoji = if (categoryEmoji.contains("?") || categoryEmoji.contains("?") || categoryEmoji.contains("?") || categoryEmoji.isBlank() || categoryEmoji.length > 4) {
+        com.example.smartexpensetracker.data.local.entity.getCategoryEmoji(transaction.category)
+    } else categoryEmoji
 
     Card(
         shape = RoundedCornerShape(18.dp),
@@ -55,7 +58,7 @@ fun TransactionItem(
         ) {
             MerchantLogo(
                 merchant = transaction.merchant,
-                categoryEmoji = categoryEmoji,
+                categoryEmoji = safeEmoji,
                 isIncome = isIncome,
                 size = 46.dp
             )
@@ -99,7 +102,7 @@ fun TransactionItem(
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f)
                     )
                     Text(
-                        text = " • ",
+                        text = " \u2022 ",
                         style = MaterialTheme.typography.bodyMedium,
                         fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f)
@@ -114,7 +117,7 @@ fun TransactionItem(
                 if (transaction.note.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = "📝 ${transaction.note}",
+                        text = "\uD83D\uDCDD ${transaction.note}",
                         style = MaterialTheme.typography.bodyMedium,
                         fontSize = 11.sp,
                         color = MaterialTheme.colorScheme.primary,

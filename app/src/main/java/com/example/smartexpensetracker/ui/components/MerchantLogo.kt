@@ -183,7 +183,7 @@ fun MerchantLogo(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "पे",
+                        text = "\u092A\u0947",
                         fontSize = (size.value * 0.42f).sp,
                         fontWeight = FontWeight.Bold,
                         color = Color.White
@@ -416,8 +416,11 @@ fun MerchantLogo(
                         .background(MaterialTheme.colorScheme.surfaceVariant),
                     contentAlignment = Alignment.Center
                 ) {
+                    val safeEmoji = if (categoryEmoji.contains("?") || categoryEmoji.contains("?") || categoryEmoji.contains("?") || categoryEmoji.isBlank() || categoryEmoji.length > 4) {
+                        "\uD83C\uDFF7\uFE0F"
+                    } else categoryEmoji
                     Text(
-                        text = categoryEmoji,
+                        text = safeEmoji,
                         fontSize = (size.value * 0.44f).sp
                     )
                 }

@@ -64,7 +64,7 @@ fun TransactionsScreen(
                 fullDateFormat.format(Date(selectedStartDate!!))
             }
         } else {
-            "Between Dates ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦"
+            "Between Dates \uD83D\uDCC5"
         }
     }
 
@@ -214,14 +214,14 @@ fun TransactionsScreen(
                 FilterChip(
                     selected = selectedType == "Expense",
                     onClick = { viewModel.selectedTypeFilter.value = if (selectedType == "Expense") null else "Expense" },
-                    label = { Text("Expenses (Debited ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒâ€šÃ‚Â´)") },
+                    label = { Text("Expenses (Debited)") },
                     modifier = Modifier.padding(end = 6.dp)
                 )
 
                 FilterChip(
                     selected = selectedType == "Income",
                     onClick = { viewModel.selectedTypeFilter.value = if (selectedType == "Income") null else "Income" },
-                    label = { Text("Income (Credited ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸Ãƒâ€¦Ã‚Â¸Ãƒâ€šÃ‚Â¢)") },
+                    label = { Text("Income (Credited)") },
                     modifier = Modifier.padding(end = 6.dp)
                 )
 
@@ -275,6 +275,8 @@ fun TransactionsScreen(
 
             // Total Header Count & Net Sum
             val totalSum = filteredTxns.sumOf { if (it.isIncome) it.amount else -it.amount }
+            val netSign = if (totalSum >= 0) "+" else "-"
+            val netAmountFormatted = String.format(Locale.US, "%,.2f", Math.abs(totalSum))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -286,7 +288,7 @@ fun TransactionsScreen(
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                 )
                 Text(
-                    text = "Net: ${if (totalSum >= 0) "+" else "-"}ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¹${String.format(Locale.getDefault(), "%,.2f", Math.abs(totalSum))}",
+                    text = "Net: $netSign\u20B9$netAmountFormatted",
                     style = MaterialTheme.typography.labelLarge.copy(
                         fontWeight = FontWeight.Bold,
                         color = if (totalSum >= 0) SuccessGreen else MaterialTheme.colorScheme.error
@@ -325,7 +327,7 @@ fun TransactionsScreen(
                     contentPadding = PaddingValues(bottom = 80.dp)
                 ) {
                                         items(filteredTxns, key = { it.id }) { txn ->
-                        val emoji = categories.find { it.name.equals(txn.category, ignoreCase = true) }?.emoji ?: "ÃƒÂ°Ã…Â¸Ã‚ÂÃ‚Â·ÃƒÂ¯Ã‚Â¸Ã‚Â"
+                        val emoji = com.example.smartexpensetracker.data.local.entity.getCategoryEmoji(txn.category)
                         TransactionItem(
                             transaction = txn,
                             categoryEmoji = emoji,
@@ -392,7 +394,7 @@ fun TransactionsScreen(
 
     if (selectedTxnForDetails != null) {
         val currentTxn = selectedTxnForDetails!!
-        val emoji = categories.find { it.name.equals(currentTxn.category, ignoreCase = true) }?.emoji ?: "Ã°Å¸ÂÂ·Ã¯Â¸Â"
+        val emoji = com.example.smartexpensetracker.data.local.entity.getCategoryEmoji(currentTxn.category)
         TransactionDetailDialog(
             transaction = currentTxn,
             categoryEmoji = emoji,

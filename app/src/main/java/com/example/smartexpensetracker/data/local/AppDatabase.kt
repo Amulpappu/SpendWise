@@ -48,6 +48,26 @@ class AppDatabase private constructor(context: Context) : SQLiteOpenHelper(conte
         try {
             db.execSQL("UPDATE monthly_budget SET currencySymbol = '\u20B9'")
         } catch (e: Exception) {}
+
+        // Auto-purge existing duplicate transactions from the database
+        try {
+            db.execSQL("""
+                DELETE FROM transactions 
+                WHERE id NOT IN (
+                    SELECT MIN(id) 
+                    FROM transactions 
+                    GROUP BY amount, isIncome, (timestamp / 600000), 
+                             CASE WHEN refId IS NOT NULL AND refId != '' THEN refId ELSE merchant END
+                )
+            """.trimIndent())
+        } catch (e: Exception) {}
+
+        // Ensure categories in database have pristine emojis
+        for (cat in DEFAULT_CATEGORIES) {
+            try {
+                db.execSQL("UPDATE categories SET emoji = ? WHERE name = ?", arrayOf(cat.emoji, cat.name))
+            } catch (e: Exception) {}
+        }
     }
 
     override fun onCreate(db: SQLiteDatabase) {
@@ -179,6 +199,50 @@ class AppDatabase private constructor(context: Context) : SQLiteOpenHelper(conte
 
         override suspend fun insertTransaction(transaction: TransactionEntity): Long {
             val db = writableDatabase
+
+            // Deduplication Check
+            // 1. RefId match
+            if (!transaction.refId.isNullOrBlank()) {
+                db.rawQuery("SELECT id FROM transactions WHERE refId = ? LIMIT 1", arrayOf(transaction.refId)).use { cursor ->
+                    if (cursor.moveToFirst()) {
+                        return cursor.getLong(0)
+                    }
+                }
+            }
+
+            // 2. Window match: same amount, same isIncome within 10 minutes
+            val windowMs = 10 * 60 * 1000L
+            val minTime = transaction.timestamp - windowMs
+            val maxTime = transaction.timestamp + windowMs
+
+            db.rawQuery(
+                "SELECT id, merchant, rawText, accountBalance FROM transactions WHERE isIncome = ? AND amount = ? AND timestamp BETWEEN ? AND ?",
+                arrayOf(
+                    (if (transaction.isIncome) 1 else 0).toString(),
+                    transaction.amount.toString(),
+                    minTime.toString(),
+                    maxTime.toString()
+                )
+            ).use { cursor ->
+                while (cursor.moveToNext()) {
+                    val existingId = cursor.getLong(0)
+                    val existingMerchant = cursor.getString(1) ?: ""
+                    val existingRaw = cursor.getString(2) ?: ""
+                    val existingBal = if (!cursor.isNull(3)) cursor.getDouble(3) else null
+
+                    val isSameMerchant = existingMerchant.equals(transaction.merchant, ignoreCase = true)
+                    val isGeneric = existingMerchant.contains("Bank", ignoreCase = true) || transaction.merchant.contains("Bank", ignoreCase = true)
+                    val isRawMatch = existingRaw == transaction.rawText ||
+                            existingRaw.contains(transaction.merchant, ignoreCase = true) ||
+                            transaction.rawText.contains(existingMerchant, ignoreCase = true)
+                    val isBalMatch = existingBal != null && transaction.accountBalance != null && Math.abs(existingBal - transaction.accountBalance) < 0.01
+
+                    if (isSameMerchant || isGeneric || isRawMatch || isBalMatch) {
+                        return existingId
+                    }
+                }
+            }
+
             val cv = ContentValues().apply {
                 put("amount", transaction.amount)
                 put("isIncome", if (transaction.isIncome) 1 else 0)
@@ -196,7 +260,7 @@ class AppDatabase private constructor(context: Context) : SQLiteOpenHelper(conte
                 put("duplicateOfId", transaction.duplicateOfId)
                 put("rawText", transaction.rawText)
             }
-            val id = db.insertWithOnConflict("transactions", null, cv, SQLiteDatabase.CONFLICT_REPLACE)
+            val id = db.insert("transactions", null, cv)
             refreshTransactions()
             return id
         }
@@ -233,6 +297,17 @@ class AppDatabase private constructor(context: Context) : SQLiteOpenHelper(conte
         override suspend fun deleteDuplicates() {
             val db = writableDatabase
             db.delete("transactions", "isDuplicate = 1", null)
+            try {
+                db.execSQL("""
+                    DELETE FROM transactions 
+                    WHERE id NOT IN (
+                        SELECT MIN(id) 
+                        FROM transactions 
+                        GROUP BY amount, isIncome, (timestamp / 600000), 
+                                 CASE WHEN refId IS NOT NULL AND refId != '' THEN refId ELSE merchant END
+                    )
+                """.trimIndent())
+            } catch (e: Exception) {}
             refreshTransactions()
         }
 
@@ -269,9 +344,11 @@ class AppDatabase private constructor(context: Context) : SQLiteOpenHelper(conte
             val db = readableDatabase
             db.rawQuery("SELECT * FROM categories", null).use { cursor ->
                 while (cursor.moveToNext()) {
+                    val name = cursor.getString(cursor.getColumnIndexOrThrow("name"))
+                    val emoji = getCategoryEmoji(name)
                     list.add(CategoryEntity(
-                        name = cursor.getString(cursor.getColumnIndexOrThrow("name")),
-                        emoji = cursor.getString(cursor.getColumnIndexOrThrow("emoji")),
+                        name = name,
+                        emoji = emoji,
                         isDefault = cursor.getInt(cursor.getColumnIndexOrThrow("isDefault")) == 1
                     ))
                 }
@@ -527,9 +604,11 @@ class AppDatabase private constructor(context: Context) : SQLiteOpenHelper(conte
         val db = readableDatabase
         db.rawQuery("SELECT * FROM categories", null).use { cursor ->
             while (cursor.moveToNext()) {
+                val name = cursor.getString(cursor.getColumnIndexOrThrow("name"))
+                val emoji = getCategoryEmoji(name)
                 list.add(CategoryEntity(
-                    name = cursor.getString(cursor.getColumnIndexOrThrow("name")),
-                    emoji = cursor.getString(cursor.getColumnIndexOrThrow("emoji")),
+                    name = name,
+                    emoji = emoji,
                     isDefault = cursor.getInt(cursor.getColumnIndexOrThrow("isDefault")) == 1
                 ))
             }
@@ -610,24 +689,24 @@ class AppDatabase private constructor(context: Context) : SQLiteOpenHelper(conte
         }
 
         val DEFAULT_CATEGORIES = listOf(
-            CategoryEntity("Friends", "ðŸ‘¥", true),
-            CategoryEntity("Groceries", "ðŸ›’", true),
-            CategoryEntity("Food", "ðŸ”", true),
-            CategoryEntity("Recharge & Bills", "ðŸ“±", true),
-            CategoryEntity("Shopping", "ðŸ›ï¸", true),
-            CategoryEntity("Transport", "ðŸš—", true),
-            CategoryEntity("Entertainment", "ðŸŽ¬", true),
-            CategoryEntity("Gaming", "ðŸŽ®", true),
-            CategoryEntity("Salary", "ðŸ’°", true),
-            CategoryEntity("Income", "ðŸ’µ", true),
-            CategoryEntity("Education", "ðŸŽ“", true),
-            CategoryEntity("Bills", "ðŸ“„", true),
-            CategoryEntity("Subscriptions", "ðŸ”", true),
-            CategoryEntity("Travel", "âœˆï¸", true),
-            CategoryEntity("Medical", "ðŸ’Š", true),
-            CategoryEntity("Technology", "ðŸ’»", true),
-            CategoryEntity("Home", "ðŸ ", true),
-            CategoryEntity("Other", "ðŸ·ï¸", true)
+            CategoryEntity("Friends", "\uD83D\uDC65", true),
+            CategoryEntity("Groceries", "\uD83D\uDED2", true),
+            CategoryEntity("Food", "\uD83C\uDF54", true),
+            CategoryEntity("Recharge & Bills", "\uD83D\uDCF1", true),
+            CategoryEntity("Shopping", "\uD83D\uDECD\uFE0F", true),
+            CategoryEntity("Transport", "\uD83D\uDE97", true),
+            CategoryEntity("Entertainment", "\uD83C\uDFAC", true),
+            CategoryEntity("Gaming", "\uD83C\uDFAE", true),
+            CategoryEntity("Salary", "\uD83D\uDCB0", true),
+            CategoryEntity("Income", "\uD83D\uDCB5", true),
+            CategoryEntity("Education", "\uD83C\uDF93", true),
+            CategoryEntity("Bills", "\uD83D\uDCC4", true),
+            CategoryEntity("Subscriptions", "\uD83D\uDD01", true),
+            CategoryEntity("Travel", "\u2708\uFE0F", true),
+            CategoryEntity("Medical", "\uD83D\uDC8A", true),
+            CategoryEntity("Technology", "\uD83D\uDCBB", true),
+            CategoryEntity("Home", "\uD83C\uDFE0", true),
+            CategoryEntity("Other", "\uD83C\uDFF7\uFE0F", true)
         )
     }
 }

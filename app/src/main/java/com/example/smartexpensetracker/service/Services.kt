@@ -35,6 +35,21 @@ class TransactionNotificationListener : NotificationListenerService() {
         // Do not process our own SpendWise notifications
         if (pkgName == applicationContext.packageName) return
 
+        // Skip SMS/MMS messaging apps because SmsReceiver already processes SMS with 100% precision
+        val isMessagingApp = pkgName.contains("messaging") ||
+                pkgName.contains(".mms") ||
+                pkgName.contains("sms") ||
+                pkgName == "com.google.android.apps.messaging" ||
+                pkgName == "com.android.mms" ||
+                pkgName == "com.samsung.android.messaging" ||
+                pkgName == "com.oneplus.mms" ||
+                pkgName == "com.coloros.mms" ||
+                pkgName == "com.oppo.mms" ||
+                pkgName == "com.xiaomi.mms" ||
+                pkgName == "com.miui.sms" ||
+                pkgName == "com.truecaller"
+        if (isMessagingApp) return
+
         val extras = sbnNonNull.notification.extras
         val title = extras.getString("android.title") ?: ""
         val text = extras.getCharSequence("android.text")?.toString() ?: ""

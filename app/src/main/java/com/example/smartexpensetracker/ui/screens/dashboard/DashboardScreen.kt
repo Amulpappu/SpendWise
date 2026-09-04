@@ -1,4 +1,4 @@
-﻿package com.example.smartexpensetracker.ui.screens.dashboard
+package com.example.smartexpensetracker.ui.screens.dashboard
 
 import java.util.Locale
 import android.widget.Toast
@@ -537,7 +537,7 @@ fun DashboardScreen(
             } else {
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     filteredTransactions.take(8).forEach { txn ->
-                        val emoji = categories.find { it.name.equals(txn.category, ignoreCase = true) }?.emoji ?: "🏷️"
+                        val emoji = com.example.smartexpensetracker.data.local.entity.getCategoryEmoji(txn.category)
                         TransactionItem(
                             transaction = txn,
                             categoryEmoji = emoji,
@@ -555,7 +555,7 @@ fun DashboardScreen(
     }
 
     if (selectedTxnForDetails != null) {
-        val emoji = categories.find { it.name.equals(selectedTxnForDetails?.category, ignoreCase = true) }?.emoji ?: "🏷️"
+        val emoji = com.example.smartexpensetracker.data.local.entity.getCategoryEmoji(selectedTxnForDetails?.category ?: "")
         TransactionDetailDialog(
             transaction = selectedTxnForDetails!!,
             categoryEmoji = emoji,
