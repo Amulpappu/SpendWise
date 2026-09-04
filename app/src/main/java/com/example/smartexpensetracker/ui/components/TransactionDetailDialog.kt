@@ -227,24 +227,7 @@ fun TransactionDetailDialog(
                     // Share Receipt Button
                     OutlinedButton(
                         onClick = {
-                            val shareBody = """
-                                💳 SpendWise Transaction Receipt
-                                --------------------------------
-                                Amount: ${if (isIncome) "+" else "-"}$cleanCurrency${transaction.amount}
-                                Payee/Sender: ${transaction.merchant}
-                                Category: ${transaction.category}
-                                Date: $fullDateStr
-                                Method: ${transaction.paymentMethod}
-                                ${if (!transaction.refId.isNullOrEmpty()) "Ref No: ${transaction.refId}" else ""}
-                                --------------------------------
-                                Tracked privately with SpendWise
-                            """.trimIndent()
-                            val sendIntent = Intent().apply {
-                                action = Intent.ACTION_SEND
-                                putExtra(Intent.EXTRA_TEXT, shareBody)
-                                type = "text/plain"
-                            }
-                            context.startActivity(Intent.createChooser(sendIntent, "Share Transaction Receipt"))
+                            com.example.smartexpensetracker.data.export.TransactionReceiptGenerator.shareTransactionReceipt(context, transaction)
                         },
                         shape = RoundedCornerShape(14.dp),
                         modifier = Modifier.weight(1f)
